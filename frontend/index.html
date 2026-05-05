@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <h1>Studio Pilates — Painel de Cadastro de Cliente</h1>
+    <p>Bem-vinda. Frontend funcionando!</p>
+
+    <!-- Container que coloca o form e a saída lado a lado (flexbox) -->
+    <div class="layout">
+
+        <form>
+            <!-- Combobox de ação — escolhe o método HTTP -->
+            <div>
+                <label for="acao">Ação:</label>
+                <select id="acao" name="acao">
+                    <option value="criar" selected>Cadastrar novo</option>
+                    <option value="listar">Listar todos</option>
+                    <option value="buscar">Buscar por ID</option>
+                    <option value="atualizar">Atualizar</option>
+                    <option value="excluir">Excluir</option>
+                </select>
+            </div>
+
+            <!-- ID — só aparece em buscar/atualizar/excluir -->
+            <div class="campo" data-actions="buscar atualizar excluir">
+                <label for="id-aluno">ID (UUID):</label>
+                <input id="id-aluno" name="id" type="text" placeholder="cole o UUID aqui">
+            </div>
+
+            <!-- Demais campos: aparecem em criar/atualizar -->
+            <div class="campo" data-actions="criar atualizar">
+                <label for="nome-aluno">Nome:</label>
+                <input id="nome-aluno" name="name" type="text" placeholder="Maria Silva">
+            </div>
+
+            <div class="campo" data-actions="criar atualizar">
+                <label for="cpf-aluno">CPF:</label>
+                <input id="cpf-aluno" name="cpf" type="text" placeholder="000.000.000-00">
+            </div>
+
+            <div class="campo" data-actions="criar atualizar">
+                <label for="nasc-aluno">Data de nascimento:</label>
+                <input id="nasc-aluno" name="birth_date" type="date">
+            </div>
+
+            <div class="campo" data-actions="criar atualizar">
+                <label for="whatsapp-aluno">Whatsapp:</label>
+                <input id="whatsapp-aluno" name="whatsapp_number" type="text" placeholder="(11) 98765-4321">
+            </div>
+
+            <div class="campo" data-actions="criar atualizar">
+                <label for="status-aluno">Status:</label>
+                <select id="status-aluno" name="client_status">
+                    <option value="">— manter atual —</option>
+                    <option value="prospecto" selected>Prospecto</option>
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                </select>
+            </div>
+
+            <div class="campo" data-actions="criar atualizar">
+                <label>
+                    <input name="marketing_consent" type="checkbox" checked>
+                    Aceita receber comunicações de marketing
+                </label>
+            </div>
+
+            <!-- is_active — só atualizar (pra reativar/desativar) -->
+            <div class="campo" data-actions="atualizar">
+                <label>
+                    <input name="is_active" type="checkbox" checked>
+                    Aluno Ativo (desmarque = desativado)
+                </label>
+            </div>
+
+            <button type="submit">Cadastrar</button>
+        </form>
+
+        <section class="saida-bloco">
+            <h2>Resposta do servidor:</h2>
+            <pre id="saida">Aguardando ação...</pre>
+        </section>
+
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
