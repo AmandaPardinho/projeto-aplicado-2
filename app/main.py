@@ -36,7 +36,6 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
         content={"detail": str(exc)},
     )
 
-
 # Registra os routers (por entidade)
 app.include_router(client_router.router)
 app.include_router(instructor_router.router)
