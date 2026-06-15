@@ -12,6 +12,9 @@ load_dotenv()
 try:
     SUPABASE_URL = os.environ["SUPABASE_URL"]
     SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
+    # service_role: a chave de admin, que passa por cima do RLS. É a que o backend
+    # usa pra ler e gravar sem esbarrar nas policies. Nunca vai pro frontend!
+    SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 except KeyError as e:
     raise RuntimeError(
         f"Environment variable {e} is required but not found in .env file."
