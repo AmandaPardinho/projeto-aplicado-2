@@ -1,6 +1,7 @@
 """
 Service do Cliente.
-Camada de regras de negócio. Coordena chamadas ao repository, valida regras complexas e prepara dados.
+É aqui que ficam as regras de negócio do cliente: o service chama o repository,
+trata os casos especiais e devolve os dados prontos pro router.
 """
 
 from typing import Optional
@@ -8,10 +9,17 @@ from uuid import UUID
 
 from app.schemas.client import Client, ClientCreate, ClientUpdate
 from app.repositories import client as repo
+from app.core.exceptions import ConflictError
 
 
 def create(data: ClientCreate) -> Client:
-    """Cria novo cliente."""
+    """Cria um cliente novo."""
+    # O CPF não pode repetir. O banco já garante isso com o UNIQUE, mas eu checo
+    # aqui antes pra devolver um 409 com mensagem boa, em vez do erro cru do driver
+    # (que viraria um 500). O data.cpf já chega só com os dígitos, normalizado lá
+    # no validador do ClientCreate.
+    if repo.get_by_cpf(data.cpf) is not None:
+        raise ConflictError(f"Já existe um cliente com o CPF {data.cpf}")
     return repo.create(data)
 
 
@@ -21,23 +29,24 @@ def get_all() -> list[Client]:
 
 
 def get_by_id(client_id: UUID) -> Optional[Client]:
-    """Busca cliente por ID. Retorna None se não existir."""
+    """Busca um cliente pelo ID. Devolve None se não achar."""
     return repo.get_by_id(client_id)
 
 
 def update(client_id: UUID, data: ClientUpdate) -> Optional[Client]:
-    """Atualiza cliente existente."""
-    # exclude_none=True: só envia ao banco os campos que o usuário preencheu (PATCH-like).
-    # mode="json": serializa date/datetime/UUID/Enum em strings JSON-compatíveis.
+    """Atualiza um cliente que já existe."""
+    # exclude_none=True manda pro banco só o que veio preenchido, então dá pra
+    # mudar um campo só sem zerar o resto. mode="json" deixa os tipos (date,
+    # datetime, UUID, Enum) no formato que o Supabase aceita.
     update_data = data.model_dump(mode="json", exclude_none=True)
 
-    # Input vazio é erro do CLIENTE, não do servidor.
-    # ValueError vira HTTP 400 via exception handler global registrado no main.py.
+    # Corpo vazio é erro de quem chamou, não nosso. Esse ValueError vira um
+    # HTTP 400 lá no main.py (tem um handler que cuida disso).
     if not update_data:
         raise ValueError("Nenhum campo para atualizar")
 
-    # Reativação automática: se vier is_active=true no PUT, limpa deleted_at
-    # (operação inversa do soft-delete feito pelo DELETE).
+    # Se o PUT mandar is_active=true, aproveito pra "ressuscitar" o registro
+    # limpando o deleted_at. É o contrário do que o DELETE faz (soft-delete).
     if update_data.get("is_active") is True:
         update_data["deleted_at"] = None
 
@@ -45,5 +54,5 @@ def update(client_id: UUID, data: ClientUpdate) -> Optional[Client]:
 
 
 def delete(client_id: UUID) -> bool:
-    """Remove cliente. Retorna True se removeu, False se não existia."""
+    """Remove o cliente (soft-delete). True se removeu, False se o ID não existia."""
     return repo.delete(client_id)

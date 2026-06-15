@@ -1,34 +1,36 @@
 """
-Entidade Instructor.
-DTOs (Data Transfer Objects) da entidade Instructor.
-Validação declarativa via Pydantic.
+Instrutor (instructor): quem dá as aulas no studio.
+
+Nem todo instrutor é fisioterapeuta com registro no conselho (CREFITO), então a
+credencial é opcional. Aqui ficam os modelos do Pydantic pro instrutor.
 """
 
-import re
 from datetime import datetime
 from enum import Enum
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+
+from app.core.validators import validate_crefito
 
 
 class InstructorStatus(str, Enum):
-    """Situação contratual do instrutor (espelha o CHECK do banco)."""
-    ATIVO = "ativo"
-    FERIAS = "ferias"
-    AFASTADO = "afastado"
-    BANCO_DE_VAGAS = "banco_de_vagas"
-    INATIVO = "inativo"
+    """Situação do instrutor no studio (bate com o CHECK do banco)."""
+    ACTIVE = "active"
+    VACATION = "vacation"        # ferias
+    ON_LEAVE = "on_leave"        # afastado
+    STANDBY = "standby"          # banco_de_vagas
+    INACTIVE = "inactive"
 
 
-# ===================================================================
-# 1. ENTIDADE — representa o registro do banco (espelha a tabela)
+# 1) Entidade: o instrutor do jeito que está salvo no banco
 # ===================================================================
 
 class Instructor(BaseModel):
-    """Entidade Instructor — espelha 1:1 o registro da tabela `instructor` no banco."""
+    """Um instrutor como ele vive na tabela `instructor` (uma linha do banco)."""
     id: UUID
     name: str
+    email: EmailStr
     has_credential: bool
     credential_number: Optional[str] = None
     specialty: Optional[str] = None
@@ -41,68 +43,46 @@ class Instructor(BaseModel):
     class Config:
         from_attributes = True
 
-# ===================================================================
-# 2. DTO usado no POST /instructors
+# 2) O que chega no POST pra cadastrar um instrutor
 # ===================================================================
 
 class InstructorCreate(BaseModel):
-    """DTO de entrada do POST /instructors — campos que o usuário envia ao cadastrar."""
+    """Campos que o usuário manda no POST /instructors pra cadastrar um instrutor."""
     name: str = Field(..., min_length=2, max_length=100, description="Nome do instrutor")
+    email: EmailStr = Field(..., description="E-mail do instrutor")
     has_credential: bool = False
     credential_number: Optional[str] = None
     specialty: Optional[str] = Field(None, max_length=100)
-    instructor_status: InstructorStatus = InstructorStatus.ATIVO
-    
-    @field_validator("credential_number")
-    @classmethod
-    def validate_credential_format(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
+    instructor_status: InstructorStatus = InstructorStatus.ACTIVE
+    _validate_crefito = field_validator("credential_number")(validate_crefito)
 
-        pattern = r"^(CREFITO-\d+/)?\d{3,7}-?[A-Z]?$"
-        if not re.match(pattern, v.strip().upper()):
-            raise ValueError("Formato inválido de CREFITO. Exemplo: 12345-F")
-        return v.strip().upper()
-    
     @model_validator(mode="after")
     def validate_credential_consistency(self):
-        """
-        Garante coerência entre has_credential e credential_number.
-        Regra: se has_credential=True, credential_number é obrigatório.
+        """Se marcou que tem credencial, o número vira obrigatório.
+
+        Não dá pra dizer has_credential=True e deixar o credential_number vazio.
         """
         if self.has_credential and not self.credential_number:
             raise ValueError("credential_number é obrigatório quando has_credential=True")
         return self
 
-# ===================================================================
-# 3. DTO usado no GET /instructors
+# 3) O que devolvemos nos GETs
 # ===================================================================
 
 class InstructorRead(Instructor):
-    """DTO de saída dos GETs — herda de Instructor. Existe para desacoplar leitura de escrita."""
+    """O que sai nos GETs. Separado da entidade só pra não misturar leitura e escrita."""
     pass
 
-# ===================================================================
-# 4. DTO usado no UPDATE /instructors/{id}
+# 4) O que chega no PUT pra editar um instrutor
 # ===================================================================
 
 class InstructorUpdate(BaseModel):
-    """DTO de atualização — todos os campos opcionais (partial update)."""
+    """Campos do PUT /instructors/{id}. Tudo opcional: manda só o que mudou."""
     name: Optional[str] = Field(None, min_length=2, max_length=100, description="Nome do instrutor")
+    email: Optional[EmailStr] = Field(None, description="E-mail do instrutor")
     has_credential: Optional[bool] = None
     credential_number: Optional[str] = None
     specialty: Optional[str] = Field(None, max_length=100)
     instructor_status: Optional[InstructorStatus] = None
     is_active: Optional[bool] = None
-    
-    @field_validator("credential_number")
-    @classmethod
-    def validate_credential_format(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-
-        pattern = r"^(CREFITO-\d+/)?\d{3,7}-?[A-Z]?$"
-        if not re.match(pattern, v.strip().upper()):
-            raise ValueError("Formato inválido de CREFITO. Exemplo: 12345-F")
-        return v.strip().upper()
-    
+    _validate_crefito = field_validator("credential_number")(validate_crefito)

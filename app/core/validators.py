@@ -4,6 +4,7 @@ Validação de FORMATO.
 """
 
 import re
+from datetime import date
 from typing import Optional
 
 
@@ -97,3 +98,59 @@ def validate_whatsapp_br(v: Optional[str]) -> Optional[str]:
         )
 
     return digits
+
+
+# ===================================================================
+# Data de nascimento
+# ===================================================================
+
+# Idade mínima para se matricular no studio (regra de negócio).
+MIN_AGE_YEARS = 4
+
+
+def validate_birth_date(v: Optional[date]) -> Optional[date]:
+    """
+    Valida a data de nascimento do cliente.
+    - Não pode ser uma data no futuro.
+    - O cliente deve ter no mínimo MIN_AGE_YEARS anos completos.
+    - Recebe um objeto `date` (o Pydantic já converteu a string antes daqui).
+    """
+    if v is None:
+        return v
+
+    today = date.today()
+
+    if v > today:
+        raise ValueError("birth_date não pode ser uma data futura")
+
+    # Idade completa: diferença de anos, menos 1 se ainda não fez aniversário este ano.
+    # O par (mês, dia) compara as datas dentro do ano sem precisar de biblioteca extra.
+    age = today.year - v.year - ((today.month, today.day) < (v.month, v.day))
+
+    if age < MIN_AGE_YEARS:
+        raise ValueError(
+            f"cliente deve ter no mínimo {MIN_AGE_YEARS} anos de idade"
+        )
+
+    return v
+
+
+# ===================================================================
+# CREFITO (registro profissional do instrutor)
+# ===================================================================
+
+def validate_crefito(v: Optional[str]) -> Optional[str]:
+    """
+    Valida o formato do registro CREFITO do instrutor.
+    - Aceita com prefixo opcional (CREFITO-10/) ou só o número.
+    - Aceita 3 a 7 dígitos, com sufixo de letra opcional (ex.: 12345-F).
+    - Retorna o valor normalizado (sem espaços, MAIÚSCULAS).
+    """
+    if v is None:
+        return v
+
+    normalized = v.strip().upper()
+    pattern = r"^(CREFITO-\d+/)?\d{3,7}-?[A-Z]?$"
+    if not re.match(pattern, normalized):
+        raise ValueError("Formato inválido de CREFITO. Exemplo: 12345-F")
+    return normalized
