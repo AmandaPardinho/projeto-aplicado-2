@@ -1,118 +1,101 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="ametista">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro</title>
+    <title>Studio Pilates — Painel</title>
+
+    <!-- Tipografia: Bricolage Grotesque (títulos) + Hanken Grotesk (corpo) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Aplica o modo claro/escuro ANTES da tela pintar (evita "flash").
+         Sem pref salva, segue o sistema operacional (prefers-color-scheme).
+         A paleta é fixa (data-theme="ametista" no <html>). -->
+    <script>
+        (function () {
+            var mode = localStorage.getItem("studio-mode")
+                || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            document.documentElement.dataset.mode = mode;
+        })();
+    </script>
 </head>
 
 <body>
-    <h1>Studio Pilates — Painel de Cadastro de Cliente</h1>
-    <p>Bem-vinda. Frontend funcionando!</p>
+    <div class="app">
 
-    <!-- Container que coloca o form e a saída lado a lado (flexbox) -->
-    <div class="layout">
+        <!-- ===== Barra lateral: a "coluna" do studio + navegação por entidade ===== -->
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">Studio <strong>Pilates</strong></span>
+            </div>
+            <nav class="nav" id="nav" aria-label="Entidades"></nav>
+            <div class="sidebar-foot">
+                <button type="button" id="mode-toggle" class="mode-toggle" aria-pressed="false">☾ Escuro</button>
+                <span class="foot-note">Painel administrativo · protótipo</span>
+            </div>
+        </aside>
 
-        <form>
-            <!-- Combobox de ação — escolhe o método HTTP -->
-            <div>
-                <label for="action">Ação:</label>
-                <select id="action" name="action">
-                    <option value="create" selected>Cadastrar novo</option>
-                    <option value="list">Listar todos</option>
-                    <option value="get">Buscar por ID</option>
-                    <option value="update">Atualizar</option>
-                    <option value="delete">Excluir</option>
-                </select>
+        <!-- ===== Área principal ===== -->
+        <main class="main">
+            <header class="topbar">
+                <p class="eyebrow">Cadastro</p>
+                <h1 id="entity-title">Clientes</h1>
+            </header>
+
+            <div class="panel">
+                <!-- Formulário (campos montados via JS conforme entidade + ação) -->
+                <form id="crud-form" class="card form-card">
+                    <div class="action-row">
+                        <label for="action">Ação</label>
+                        <select id="action" name="action">
+                            <option value="create" selected>Cadastrar novo</option>
+                            <option value="list">Listar todos</option>
+                            <option value="get">Buscar por ID</option>
+                            <option value="update">Atualizar</option>
+                            <option value="delete">Excluir</option>
+                        </select>
+                    </div>
+
+                    <div id="form-fields" class="form-fields"></div>
+                    <p id="form-hint" class="form-hint"></p>
+
+                    <button type="submit" class="btn-primary">Cadastrar</button>
+                </form>
+
+                <!-- Resposta crua do servidor -->
+                <section class="card output-card">
+                    <h2>Resposta do servidor</h2>
+                    <div id="action-prompt" class="action-prompt hidden"></div>
+                    <pre id="output" class="output" data-state="idle">Aguardando ação...</pre>
+                </section>
             </div>
 
-            <!-- ID — só aparece em get/update/delete -->
-            <div class="field" data-actions="get update delete">
-                <label for="client-id">ID (UUID):</label>
-                <input id="client-id" name="id" type="text" placeholder="cole o UUID aqui">
-            </div>
-
-            <!-- Demais campos: aparecem em create/update -->
-            <div class="field" data-actions="create update">
-                <label for="client-name">Nome:</label>
-                <input id="client-name" name="name" type="text" placeholder="Maria Silva">
-            </div>
-
-            <div class="field" data-actions="create update">
-                <label for="client-cpf">CPF:</label>
-                <input id="client-cpf" name="cpf" type="text" placeholder="000.000.000-00">
-            </div>
-
-            <div class="field" data-actions="create update">
-                <label for="client-birth-date">Data de nascimento:</label>
-                <input id="client-birth-date" name="birth_date" type="date">
-            </div>
-
-            <div class="field" data-actions="create update">
-                <label for="client-whatsapp">Whatsapp:</label>
-                <input id="client-whatsapp" name="whatsapp_number" type="text" placeholder="(11) 98765-4321">
-            </div>
-
-            <div class="field" data-actions="create update">
-                <label for="client-email">E-mail:</label>
-                <input id="client-email" name="email" type="email" placeholder="maria@exemplo.com">
-            </div>
-
-            <div class="field" data-actions="create update">
-                <label for="client-status">Status:</label>
-                <select id="client-status" name="client_status">
-                    <option value="">— manter atual —</option>
-                    <option value="prospect" selected>Prospecto</option>
-                    <option value="active">Ativo</option>
-                    <option value="inactive">Inativo</option>
-                </select>
-            </div>
-
-            <div class="field" data-actions="create update">
-                <label>
-                    <input name="marketing_consent" type="checkbox" checked>
-                    Aceita receber comunicações de marketing
-                </label>
-            </div>
-
-            <!-- is_active — só update (pra reativar/desativar) -->
-            <div class="field" data-actions="update">
-                <label>
-                    <input name="is_active" type="checkbox" checked>
-                    Aluno Ativo (desmarque = desativado)
-                </label>
-            </div>
-
-            <button type="submit">Cadastrar</button>
-        </form>
-
-        <section class="output-block">
-            <h2>Resposta do servidor:</h2>
-            <pre id="output">Aguardando ação...</pre>
-        </section>
-
+            <!-- Tabela de listagem (aparece na ação "Listar") -->
+            <section id="table-card" class="card table-card hidden">
+                <h2 id="table-title">Registros</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="table-head"></thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <!-- Tabela de clientes — preenchida via JS quando a ação "list" roda -->
-    <section class="table-block hidden" id="table-block">
-        <h2>Clientes cadastrados</h2>
-        <table id="clients-table">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>CPF</th>
-                    <th>WhatsApp</th>
-                </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-        </table>
-    </section>
-
-    <!-- IMask: biblioteca de máscaras de input (CDN, ~10kb). Cuida de cursor, apagar e colar. -->
+    <!-- IMask: máscaras de input (CDN, ~10kb). Cuida de cursor, apagar e colar. -->
     <script src="https://unpkg.com/imask@7/dist/imask.min.js"></script>
+    <!-- Ordem importa: api → entities → app (o app usa os dois) -->
     <script src="js/api.js"></script>
+    <script src="js/entities.js"></script>
     <script src="js/app.js"></script>
 </body>
 

@@ -1,157 +1,596 @@
-* {
+/* ============================================================
+   styles.css — identidade visual do Studio Pilates.
+   Conceito: back-office de marca de bem-estar — calmo, preciso,
+   com respiro. Traços finos, bastante ar.
+
+   COR EM DOIS EIXOS INDEPENDENTES:
+     1) data-mode  (claro/escuro) -> os NEUTROS: fundo, texto, linhas
+     2) data-theme (paleta)       -> só a COR DA MARCA (--brand)
+   As cores derivadas da marca (tints, hover, texto-marca, fundo dos
+   campos) saem de color-mix, então se adaptam sozinhas à paleta E ao modo.
+   ============================================================ */
+
+:root {
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(27, 36, 32, .04), 0 8px 24px rgba(27, 36, 32, .06);
+
+    --font-display: "Bricolage Grotesque", Georgia, serif;
+    --font-body: "Hanken Grotesk", system-ui, sans-serif;
+}
+
+/* ----- MODO CLARO (padrão) ----- */
+:root,
+html[data-mode="light"] {
+    color-scheme: light;
+    --bg: #F6F1F3;
+    --surface: #FFFFFF;
+    --ink: #2A2230;
+    --line: #E6DBE1;
+    --muted: #6E626C;
+    --sidebar-bg: #2C2230;
+    --code-bg: #F7F4F7;
+    --danger: #B3402E;
+    --danger-soft: #F6E3DE;
+    --danger-ink: #6E2418;
+}
+
+/* ----- MODO ESCURO ----- */
+html[data-mode="dark"] {
+    color-scheme: dark;
+    --bg: #16121A;
+    --surface: #221C28;
+    --ink: #ECE4EC;
+    --line: #382F40;
+    --muted: #A99FB0;
+    --sidebar-bg: #110D16;
+    --code-bg: #1A141F;
+    --danger: #E2786A;
+    --danger-soft: #3A201D;
+    --danger-ink: #F3C9C2;
+}
+
+/* ----- PALETAS: cada uma define só a cor da marca -----
+   Ativa: Ametista (data-theme no <html>). Cobalto e Âmbar ficam aqui
+   prontas — pra trocar, é só mudar data-theme="ametista" no index.html. */
+html[data-theme="ametista"] {
+    --brand: #7C4A6B;
+    --brand-2: #A87C97;
+}
+
+html[data-theme="cobalto"] {
+    --brand: #3650D9;
+    --brand-2: #6E83EA;
+}
+
+html[data-theme="ambar"] {
+    --brand: #C8791E;
+    --brand-2: #E0A24E;
+}
+
+/* ----- Cores derivadas da marca (adaptam à paleta E ao modo) ----- */
+:root {
+    --brand-soft: color-mix(in srgb, var(--brand) 14%, var(--surface));
+    --brand-hover: color-mix(in srgb, var(--brand) 82%, #000);
+    --brand-accent: color-mix(in srgb, var(--brand) 60%, var(--ink));
+    --field-bg: color-mix(in srgb, var(--brand) 5%, var(--surface));
+}
+
+*,
+*::before,
+*::after {
     box-sizing: border-box;
+}
+
+html,
+body {
     margin: 0;
-    padding: 0;
 }
 
 body {
-    font-family: system-ui, sans-serif;
-    background: #f0f4f8;
-    padding: 0.5rem 1.25rem;
-    line-height: 1.35;
-    font-size: 0.9rem;
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
 }
 
-h1 {
-    color: #1e3a5f;
-    margin: 0;
-    font-size: 1.15rem;
-    padding: 0.2rem 2.75rem;
-}
-
-p {
-    /* Esconde a frase "Bem-vinda. Frontend funcionando!" pra ganhar espaço vertical */
-    display: none;
-}
-
+h1,
 h2 {
-    color: #444;
-    margin-top: 0;
-    margin-bottom: 0.4rem;
-    font-size: 1rem;
-}
-
-form {
-    max-width: 460px;
-    background: white;
-    padding: 0.75rem 1.25rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    margin-top: 0.25rem;
-}
-
-form>div {
-    margin-bottom: 0.45rem;
-}
-
-label {
-    display: block;
+    font-family: var(--font-display);
     font-weight: 600;
-    margin-bottom: 0.2rem;
-    font-size: 0.85rem;
+    letter-spacing: -.01em;
+    margin: 0;
 }
 
-input[type="text"],
-input[type="date"],
-input[type="email"],
+.hidden {
+    display: none !important;
+}
+
+/* ===== Esqueleto: sidebar + main ===== */
+.app {
+    display: grid;
+    grid-template-columns: 264px 1fr;
+    min-height: 100vh;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+    background: var(--sidebar-bg);
+    color: #D9E2DC;
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* "coluna" do Pilates: barra vertical com nós — elemento-assinatura */
+.brand-mark {
+    width: 14px;
+    height: 34px;
+    border-radius: 7px;
+    background: linear-gradient(var(--brand), var(--brand-2));
+    position: relative;
+    flex: none;
+}
+
+.brand-mark::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, .55) 1.5px, transparent 2px);
+    background-size: 100% 8px;
+    background-position: center;
+}
+
+.brand-name {
+    font-family: var(--font-display);
+    font-size: 19px;
+    color: #fff;
+    font-weight: 500;
+}
+
+.brand-name strong {
+    font-weight: 700;
+}
+
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    padding-left: 14px;
+}
+
+/* a "coluna" vertical que liga os itens do menu */
+.nav::before {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: rgba(255, 255, 255, .14);
+}
+
+.nav-item {
+    position: relative;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: #C2CFC8;
+    font: inherit;
+    font-weight: 500;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+/* nó na coluna, alinhado a cada item */
+.nav-item::before {
+    content: "";
+    position: absolute;
+    left: -11px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .25);
+    transition: background .15s, box-shadow .15s;
+}
+
+.nav-item:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .06);
+}
+
+.nav-item.is-active {
+    color: #fff;
+    background: var(--brand);
+}
+
+.nav-item.is-active::before {
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .25);
+}
+
+.nav-item:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+.sidebar-foot {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mode-toggle {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 500;
+    color: #fff;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    transition: background .15s;
+}
+
+.mode-toggle:hover {
+    background: rgba(255, 255, 255, .12);
+}
+
+.mode-toggle:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+.foot-note {
+    font-size: 12px;
+    color: #7F8C85;
+}
+
+/* ===== Main ===== */
+.main {
+    padding: 36px 44px 64px;
+    max-width: 1100px;
+}
+
+.topbar {
+    margin-bottom: 28px;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--brand);
+    margin: 0 0 6px;
+}
+
+.topbar h1 {
+    font-size: 32px;
+}
+
+.panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+    gap: 24px;
+    align-items: start;
+}
+
+/* ===== Cards ===== */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.card h2 {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--brand-accent);
+    margin: 0 0 16px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+/* ===== Formulário ===== */
+/* Faixa de topo do formulário: cabeçalho tingido com o tom claro da marca.
+   As margens negativas "sangram" a faixa até as bordas do card. */
+.action-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: -24px -24px 22px;
+    padding: 16px 24px;
+    background: var(--brand-soft);
+    border-bottom: 1px solid var(--line);
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.action-row label {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--brand-accent);
+}
+
+.action-row select {
+    flex: 1;
+}
+
+.form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+input,
 select {
     width: 100%;
-    padding: 0.4rem 0.55rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 0.9rem;
+    font: inherit;
+    color: var(--ink);
+    /* leve tom da marca no fundo; clareia pra surface ao focar */
+    background: var(--field-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    transition: border-color .15s, box-shadow .15s, background .15s;
 }
 
-input[type="checkbox"] {
-    margin-right: 0.4rem;
+input:focus,
+select:focus {
+    outline: none;
+    background: var(--surface);
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-soft);
 }
 
-button {
-    background: #1e3a5f;
-    color: white;
-    padding: 0.5rem 1.25rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    margin-top: 0.4rem;
+.field--check {
+    flex-direction: row;
 }
 
-button:hover {
-    background: #2c5282;
-}
-
-#output {
-    background: #1e1e1e;
-    color: #d4d4d4;
-    padding: 0.75rem;
-    border-radius: 6px;
-    font-family: 'Consolas', monospace;
-    font-size: 0.8rem;
-    white-space: pre-wrap;
-    max-height: 480px;
-    overflow-y: auto;
-}
-
-/* ===== Layout lado a lado (flexbox) ===== */
-.layout {
+.check {
     display: flex;
-    gap: 1rem;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    /* em telas pequenas, vira coluna */
-    margin-top: 0.25rem;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 400;
 }
 
-.layout form {
-    flex: 1;
-    min-width: 320px;
-    max-width: 500px;
-    margin-top: 0;
+.check input {
+    width: auto;
+    accent-color: var(--brand);
 }
 
-.output-block {
-    flex: 1;
-    min-width: 320px;
+.form-hint {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 14px 0 0;
 }
 
-/* ===== Mostrar/esconder campos conforme a ação ===== */
-.field.hidden {
-    display: none;
-}
-
-/* ===== Tabela de clientes (ação "list") ===== */
-.table-block {
-    margin-top: 1rem;
-}
-
-.table-block.hidden {
-    display: none;
-}
-
-#clients-table {
-    border-collapse: collapse;
+.btn-primary {
+    margin-top: 22px;
     width: 100%;
-    max-width: 700px;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 0;
+    cursor: pointer;
+    background: var(--brand);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    transition: background .15s;
 }
 
-#clients-table th,
-#clients-table td {
+.btn-primary:hover {
+    background: var(--brand-hover);
+}
+
+.btn-primary:focus-visible {
+    outline: 3px solid var(--brand-soft);
+    outline-offset: 2px;
+}
+
+/* ===== Prompt de decisão (reativar cliente / cancelar) ===== */
+.action-prompt {
+    border: 1px solid var(--brand);
+    background: var(--brand-soft);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+
+.prompt-msg {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.prompt-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* botão compacto (sobrescreve a largura total do .btn-primary) */
+.btn-sm {
+    width: auto;
+    margin-top: 0;
+    padding: 8px 14px;
+    font-size: 13px;
+}
+
+/* botão secundário (cancelar/fechar) */
+.btn-ghost {
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    color: var(--brand-accent);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    transition: background .15s;
+}
+
+.btn-ghost:hover {
+    background: var(--bg);
+}
+
+.btn-ghost:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+/* ===== Saída do servidor ===== */
+.output {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 120px;
+    max-height: 420px;
+    overflow-y: auto;
+    color: var(--ink);
+}
+
+.output[data-state="ok"] {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+}
+
+.output[data-state="error"] {
+    border-color: var(--danger);
+    background: var(--danger-soft);
+    color: var(--danger-ink);
+}
+
+.output[data-state="loading"] {
+    color: var(--muted);
+}
+
+/* ===== Tabela ===== */
+.table-card {
+    margin-top: 24px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th,
+td {
     text-align: left;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
 }
 
-#clients-table th {
-    background: #1e3a5f;
-    color: white;
-    font-size: 0.85rem;
+th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    font-weight: 600;
 }
 
-#clients-table tr:hover td {
-    background: #f0f4f8;
+tbody tr:hover {
+    background: var(--brand-soft);
+}
+
+td.empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 24px;
+}
+
+/* ===== Responsivo ===== */
+@media (max-width: 860px) {
+    .app {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        position: static;
+        height: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .sidebar-foot {
+        display: none;
+    }
+
+    .nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding-left: 0;
+    }
+
+    .nav::before {
+        display: none;
+    }
+
+    .nav-item::before {
+        display: none;
+    }
+
+    .panel {
+        grid-template-columns: 1fr;
+    }
+
+    .main {
+        padding: 24px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+    }
 }

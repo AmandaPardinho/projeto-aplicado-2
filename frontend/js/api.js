@@ -29,17 +29,32 @@ async function request(method, route, body = null) {
     // Lê o corpo como JSON
     const data = await response.json();
 
-    // Se não foi 2xx, lança erro com a mensagem do backend
+    // Se não foi 2xx, lança um erro que CARREGA o status e o corpo inteiro.
+    // (Antes a gente jogava fora tudo menos o detail — mas o 409 de CPF
+    // repetido traz o `conflict_with`, que o app.js usa pra oferecer reativar.)
     if (!response.ok) {
-        throw new Error(JSON.stringify(data.detail, null, 2));
+        const message = typeof data.detail === "string"
+            ? data.detail
+            : JSON.stringify(data.detail, null, 2);
+        const error = new Error(message);
+        error.status = response.status;
+        error.body = data;
+        throw error;
     }
 
     return data;
 }
 
-// ===== 5 funções de 1 linha — cada uma é uma operação CRUD =====
-const createClient = (data)     => request("POST",   "/clients", data);
-const listClients  = ()         => request("GET",    "/clients");
-const getClient    = (id)       => request("GET",    `/clients/${id}`);
-const updateClient = (id, data) => request("PUT",    `/clients/${id}`, data);
-const deleteClient = (id)       => request("DELETE", `/clients/${id}`);
+/* ===== CRUD genérico =====
+   As 5 operações agora recebem o `endpoint` da entidade (ex.: "/clients").
+   É a mesma ideia de antes, mas servindo as 4 entidades em vez de só Client. */
+const api = {
+    create: (endpoint, data) => request("POST", endpoint, data),
+    list: (endpoint) => request("GET", endpoint),
+    get: (endpoint, id) => request("GET", `${endpoint}/${id}`),
+    update: (endpoint, id, data) => request("PUT", `${endpoint}/${id}`, data),
+    remove: (endpoint, id) => request("DELETE", `${endpoint}/${id}`),
+    // Busca de cliente por CPF (só o Client tem). encodeURIComponent cuida da
+    // pontuação do CPF na URL.
+    getByCpf: (cpf) => request("GET", `/clients/by-cpf/${encodeURIComponent(cpf)}`),
+};
