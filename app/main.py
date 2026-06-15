@@ -42,11 +42,15 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
 # Exception handler global: ConflictError (recurso duplicado) → HTTP 409.
 @app.exception_handler(ConflictError)
 async def conflict_error_handler(request: Request, exc: ConflictError) -> JSONResponse:
-    """Converte ConflictError lançado nos services em HTTP 409 Conflict."""
-    return JSONResponse(
-        status_code=409,
-        content={"detail": str(exc)},
-    )
+    """Converte ConflictError lançado nos services em HTTP 409 Conflict.
+
+    Se a exceção trouxer `conflict_with` (dados do registro existente), inclui
+    no corpo — é o que permite o front oferecer reativar em vez de só barrar.
+    """
+    content = {"detail": str(exc)}
+    if getattr(exc, "conflict_with", None):
+        content["conflict_with"] = exc.conflict_with
+    return JSONResponse(status_code=409, content=content)
 
 # Exception handler global: NotFoundError (recurso referenciado não existe) → HTTP 404.
 @app.exception_handler(NotFoundError)

@@ -32,6 +32,26 @@ def list_clients() -> list[Client]:
 
 
 @router.get(
+    "/by-cpf/{cpf}",
+    response_model=ClientRead,
+    summary="Busca um cliente pelo CPF",
+)
+def get_client_by_cpf(cpf: str) -> Client:
+    """Retorna o cliente com aquele CPF (mesmo desativado), ou 404.
+
+    Útil pra recepção achar uma aluna que já existe — seja pra reativar
+    (voltou a treinar) ou pra excluir (pedido de LGPD).
+    """
+    client = service.find_by_cpf(cpf)
+    if client is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Nenhum cliente encontrado com o CPF {cpf}",
+        )
+    return client
+
+
+@router.get(
     "/{client_id}",
     response_model=ClientRead,
     summary="Busca um cliente pelo ID"

@@ -4,6 +4,7 @@ Service do Cliente.
 trata os casos especiais e devolve os dados prontos pro router.
 """
 
+import re
 from typing import Optional
 from uuid import UUID
 
@@ -18,8 +19,19 @@ def create(data: ClientCreate) -> Client:
     # aqui antes pra devolver um 409 com mensagem boa, em vez do erro cru do driver
     # (que viraria um 500). O data.cpf já chega só com os dígitos, normalizado lá
     # no validador do ClientCreate.
-    if repo.get_by_cpf(data.cpf) is not None:
-        raise ConflictError(f"Já existe um cliente com o CPF {data.cpf}")
+    existing = repo.get_by_cpf(data.cpf)
+    if existing is not None:
+        # Mando junto QUEM é a aluna existente (id, nome, se está ativa). Assim a
+        # UI pode oferecer reativar, em vez de só dizer "já existe". A decisão de
+        # reativar é da recepção (a aluna pode ter pedido exclusão por LGPD).
+        raise ConflictError(
+            f"Já existe um cliente com o CPF {data.cpf}",
+            conflict_with={
+                "id": str(existing.id),
+                "name": existing.name,
+                "is_active": existing.is_active,
+            },
+        )
     return repo.create(data)
 
 
@@ -31,6 +43,16 @@ def get_all() -> list[Client]:
 def get_by_id(client_id: UUID) -> Optional[Client]:
     """Busca um cliente pelo ID. Devolve None se não achar."""
     return repo.get_by_id(client_id)
+
+
+def find_by_cpf(cpf: str) -> Optional[Client]:
+    """Busca um cliente pelo CPF (pra recepção achar uma aluna que já existe).
+
+    Normaliza a entrada pra só dígitos antes de consultar, então tanto faz vir
+    "529.982.247-25" ou "52998224725". Devolve None se não achar.
+    """
+    digits = re.sub(r"\D", "", cpf)
+    return repo.get_by_cpf(digits)
 
 
 def update(client_id: UUID, data: ClientUpdate) -> Optional[Client]:
