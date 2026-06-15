@@ -9,6 +9,9 @@ from fastapi.responses import JSONResponse
 
 from app.api import instructor as instructor_router
 from app.api import client as client_router
+from app.api import plan as plan_router
+from app.api import anamnesis as anamnesis_router
+from app.core.exceptions import ConflictError, NotFoundError
 
 
 app = FastAPI(
@@ -36,9 +39,29 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
         content={"detail": str(exc)},
     )
 
+# Exception handler global: ConflictError (recurso duplicado) → HTTP 409.
+@app.exception_handler(ConflictError)
+async def conflict_error_handler(request: Request, exc: ConflictError) -> JSONResponse:
+    """Converte ConflictError lançado nos services em HTTP 409 Conflict."""
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(exc)},
+    )
+
+# Exception handler global: NotFoundError (recurso referenciado não existe) → HTTP 404.
+@app.exception_handler(NotFoundError)
+async def not_found_error_handler(request: Request, exc: NotFoundError) -> JSONResponse:
+    """Converte NotFoundError lançado nos services em HTTP 404 Not Found."""
+    return JSONResponse(
+        status_code=404,
+        content={"detail": str(exc)},
+    )
+
 # Registra os routers (por entidade)
 app.include_router(client_router.router)
 app.include_router(instructor_router.router)
+app.include_router(plan_router.router)
+app.include_router(anamnesis_router.router)
 
 @app.get("/", tags=["Health"])
 def root():
