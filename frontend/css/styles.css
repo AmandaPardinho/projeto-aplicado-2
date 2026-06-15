@@ -53,6 +53,7 @@ label {
 
 input[type="text"],
 input[type="date"],
+input[type="email"],
 select {
     width: 100%;
     padding: 0.4rem 0.55rem;
@@ -80,7 +81,7 @@ button:hover {
     background: #2c5282;
 }
 
-#saida {
+#output {
     background: #1e1e1e;
     color: #d4d4d4;
     padding: 0.75rem;
@@ -109,12 +110,48 @@ button:hover {
     margin-top: 0;
 }
 
-.saida-bloco {
+.output-block {
     flex: 1;
     min-width: 320px;
 }
 
 /* ===== Mostrar/esconder campos conforme a ação ===== */
-.campo.oculto {
+.field.hidden {
     display: none;
+}
+
+/* ===== Tabela de clientes (ação "list") ===== */
+.table-block {
+    margin-top: 1rem;
+}
+
+.table-block.hidden {
+    display: none;
+}
+
+#clients-table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 700px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+#clients-table th,
+#clients-table td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+#clients-table th {
+    background: #1e3a5f;
+    color: white;
+    font-size: 0.85rem;
+}
+
+#clients-table tr:hover td {
+    background: #f0f4f8;
 }

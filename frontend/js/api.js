@@ -8,38 +8,38 @@ const API_BASE = "http://127.0.0.1:8000";
 
 /**
  * Helper genérico — faz QUALQUER requisição HTTP pro backend.
- * @param {string} metodo - "GET" | "POST" | "PUT" | "DELETE"
- * @param {string} rota   - ex.: "/clients" ou "/clients/abc-123"
- * @param {object|null} corpo - objeto JS que vira JSON (null em GET/DELETE)
+ * @param {string} method - "GET" | "POST" | "PUT" | "DELETE"
+ * @param {string} route  - ex.: "/clients" ou "/clients/abc-123"
+ * @param {object|null} body - objeto JS que vira JSON (null em GET/DELETE)
  */
-async function request(metodo, rota, corpo = null) {
-    const opcoes = {
-        method: metodo,
+async function request(method, route, body = null) {
+    const options = {
+        method: method,
         headers: { "Content-Type": "application/json" },
     };
-    if (corpo !== null) opcoes.body = JSON.stringify(corpo);
+    if (body !== null) options.body = JSON.stringify(body);
 
-    const resposta = await fetch(`${API_BASE}${rota}`, opcoes);
+    const response = await fetch(`${API_BASE}${route}`, options);
 
     // 204 No Content (caso típico do DELETE) — não tem corpo pra ler
-    if (resposta.status === 204) {
+    if (response.status === 204) {
         return { _info: "Excluído com sucesso (204 No Content)" };
     }
 
     // Lê o corpo como JSON
-    const dados = await resposta.json();
+    const data = await response.json();
 
     // Se não foi 2xx, lança erro com a mensagem do backend
-    if (!resposta.ok) {
-        throw new Error(JSON.stringify(dados.detail, null, 2));
+    if (!response.ok) {
+        throw new Error(JSON.stringify(data.detail, null, 2));
     }
 
-    return dados;
+    return data;
 }
 
 // ===== 5 funções de 1 linha — cada uma é uma operação CRUD =====
-const criarAluno     = (dados)     => request("POST",   "/clients", dados);
-const listarAlunos   = ()          => request("GET",    "/clients");
-const buscarAluno    = (id)        => request("GET",    `/clients/${id}`);
-const atualizarAluno = (id, dados) => request("PUT",    `/clients/${id}`, dados);
-const excluirAluno   = (id)        => request("DELETE", `/clients/${id}`);
+const createClient = (data)     => request("POST",   "/clients", data);
+const listClients  = ()         => request("GET",    "/clients");
+const getClient    = (id)       => request("GET",    `/clients/${id}`);
+const updateClient = (id, data) => request("PUT",    `/clients/${id}`, data);
+const deleteClient = (id)       => request("DELETE", `/clients/${id}`);

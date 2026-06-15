@@ -4,91 +4,143 @@
    ============================================================ */
 
 // Texto que o botão exibe pra cada ação
-const TEXTO_BOTAO = {
-    criar:     "Cadastrar",
-    listar:    "Listar",
-    buscar:    "Buscar",
-    atualizar: "Atualizar",
-    excluir:   "Excluir",
+const BUTTON_LABEL = {
+    create: "Cadastrar",
+    list:   "Listar",
+    get:    "Buscar",
+    update: "Atualizar",
+    delete: "Excluir",
 };
 
 // 1. Pega referências dos elementos da página que vamos usar
-const form        = document.querySelector("form");
-const saida       = document.querySelector("#saida");
-const acaoSelect  = document.querySelector("#acao");
-const botao       = form.querySelector("button[type='submit']");
+const form         = document.querySelector("form");
+const output       = document.querySelector("#output");
+const actionSelect = document.querySelector("#action");
+const submitButton = form.querySelector("button[type='submit']");
 
 // 2. Função que mostra/esconde campos conforme a ação selecionada
-function aplicarAcao() {
-    const acao = acaoSelect.value;
+function applyAction() {
+    const action = actionSelect.value;
 
     // Atualiza o texto do botão
-    botao.textContent = TEXTO_BOTAO[acao];
+    submitButton.textContent = BUTTON_LABEL[action];
 
-    // Para cada .campo, decide se mostra ou esconde
-    document.querySelectorAll(".campo").forEach((campo) => {
-        const acoesPermitidas = (campo.dataset.actions || "").split(" ");
-        if (acoesPermitidas.includes(acao)) {
-            campo.classList.remove("oculto");
+    // Para cada .field, decide se mostra ou esconde
+    document.querySelectorAll(".field").forEach((field) => {
+        const allowedActions = (field.dataset.actions || "").split(" ");
+        if (allowedActions.includes(action)) {
+            field.classList.remove("hidden");
         } else {
-            campo.classList.add("oculto");
+            field.classList.add("hidden");
         }
     });
 }
 
 // 3. Liga o evento "mudou o select" → reaplica
-acaoSelect.addEventListener("change", aplicarAcao);
-aplicarAcao(); // roda uma vez ao carregar pra estado inicial
+actionSelect.addEventListener("change", applyAction);
+applyAction(); // roda uma vez ao carregar pra estado inicial
+
+// 3.5. Máscaras de input (IMask).
+// São puramente VISUAIS: o backend já normaliza (joga fora pontuação),
+// então mandar "(11) 98765-4321" ou "5511987654321" dá no mesmo lá no servidor.
+// Os inputs continuam no DOM mesmo quando ocultos, então basta aplicar uma vez.
+IMask(document.querySelector("#client-cpf"), {
+    mask: "000.000.000-00",
+});
+IMask(document.querySelector("#client-whatsapp"), {
+    mask: "(00) 00000-0000",
+});
 
 // 4. Função que coleta os campos VISÍVEIS e PREENCHIDOS do form
-function coletarCampos() {
-    const dados = {};
-    document.querySelectorAll(".campo:not(.oculto)").forEach((campo) => {
-        const input = campo.querySelector("input, select");
+function collectFields() {
+    const data = {};
+    document.querySelectorAll(".field:not(.hidden)").forEach((field) => {
+        const input = field.querySelector("input, select");
         if (!input) return;
-        const nome = input.name;
-        const valor = input.type === "checkbox" ? input.checked : input.value.trim();
-        if (valor === "") return; // ignora vazios (importante pro PUT parcial)
-        dados[nome] = valor;
+        const fieldName = input.name;
+        const value = input.type === "checkbox" ? input.checked : input.value.trim();
+        if (value === "") return; // ignora vazios (importante pro PUT parcial)
+        data[fieldName] = value;
     });
-    return dados;
+    return data;
+}
+
+// 4.5. Formatação para EXIBIÇÃO (o banco guarda só dígitos; aqui deixamos bonito).
+//      Se o valor vier fora do formato esperado, devolvemos como veio (não quebra a tela).
+function formatCpf(value) {
+    const d = String(value).replace(/\D/g, "");
+    if (d.length !== 11) return value;
+    return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
+function formatWhatsapp(value) {
+    const d = String(value).replace(/\D/g, "");
+    // Banco guarda com o 55 na frente (5511987654321). Tira o código do país pra exibir.
+    const national = d.length === 13 && d.startsWith("55") ? d.slice(2) : d;
+    if (national.length !== 11) return value;
+    return national.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+}
+
+// 4.6. Monta a tabela de clientes a partir da lista que o backend devolve.
+function renderTable(clients) {
+    const tableBody = document.querySelector("#table-body");
+    tableBody.innerHTML = ""; // limpa render anterior
+
+    clients.forEach((client) => {
+        const tr = document.createElement("tr");
+
+        const tdName = document.createElement("td");
+        tdName.textContent = client.name; // textContent (não innerHTML) evita injeção de HTML pelo nome
+
+        const tdCpf = document.createElement("td");
+        tdCpf.textContent = formatCpf(client.cpf);
+
+        const tdWhatsapp = document.createElement("td");
+        tdWhatsapp.textContent = formatWhatsapp(client.whatsapp_number);
+
+        tr.append(tdName, tdCpf, tdWhatsapp);
+        tableBody.appendChild(tr);
+    });
+
+    document.querySelector("#table-block").classList.remove("hidden");
 }
 
 // 5. Submit — escolhe o método HTTP conforme a ação selecionada
-form.addEventListener("submit", async (evento) => {
-    evento.preventDefault();
+form.addEventListener("submit", async (event) => {
+    event.preventDefault();
 
-    const acao  = acaoSelect.value;
-    const dados = coletarCampos();
-    const id    = dados.id;     // pode estar undefined
-    delete dados.id;            // id vai pela URL, não no body
+    const action = actionSelect.value;
+    const data   = collectFields();
+    const id     = data.id;     // pode estar undefined
+    delete data.id;             // id vai pela URL, não no body
 
-    saida.textContent = "⏳ Enviando...";
+    output.textContent = "⏳ Enviando...";
 
     try {
-        let resposta;
-        switch (acao) {
-            case "criar":
-                resposta = await criarAluno(dados);
+        let response;
+        switch (action) {
+            case "create":
+                response = await createClient(data);
                 break;
-            case "listar":
-                resposta = await listarAlunos();
+            case "list":
+                response = await listClients();
+                renderTable(response); // além do JSON cru no #output, monta a tabela bonita
                 break;
-            case "buscar":
+            case "get":
                 if (!id) throw new Error("Informe o ID para buscar.");
-                resposta = await buscarAluno(id);
+                response = await getClient(id);
                 break;
-            case "atualizar":
+            case "update":
                 if (!id) throw new Error("Informe o ID para atualizar.");
-                resposta = await atualizarAluno(id, dados);
+                response = await updateClient(id, data);
                 break;
-            case "excluir":
+            case "delete":
                 if (!id) throw new Error("Informe o ID para excluir.");
-                resposta = await excluirAluno(id);
+                response = await deleteClient(id);
                 break;
         }
-        saida.textContent = "✅ Sucesso:\n" + JSON.stringify(resposta, null, 2);
-    } catch (erro) {
-        saida.textContent = "❌ Erro:\n" + erro.message;
+        output.textContent = "✅ Sucesso:\n" + JSON.stringify(response, null, 2);
+    } catch (error) {
+        output.textContent = "❌ Erro:\n" + error.message;
     }
 });
