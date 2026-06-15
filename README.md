@@ -28,7 +28,7 @@ O backend segue separação em camadas (DDD lite):
 
 Padrões aplicados:
 - **Soft-delete** em todas as entidades (`is_active` + `deleted_at`) — LGPD compliance e auditoria.
-- **Reativação automática** via `PUT {is_active: true}` (limpa `deleted_at` no service).
+- **Reativação de cliente** via `PUT {is_active: true}` (limpa `deleted_at` no service). Ao recadastrar um CPF que já existe, o `POST` devolve **409** carregando os dados da aluna existente (`conflict_with`: id, nome, `is_active`), e o frontend oferece reativar — **decisão explícita** da recepção (a aluna pode ter passado o CPF pra pedir exclusão por LGPD, não pra voltar).
 - **Imutabilidade de `created_at`** via trigger PostgreSQL (regra no banco, não no app).
 - **Validação em duas camadas:** `CHECK` no banco (fonte da verdade) + Enum/Pydantic no app (UX e fail-fast).
 
@@ -114,16 +114,22 @@ Acesse:
 
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/clients` | Cria um novo cliente |
+| POST | `/clients` | Cria um novo cliente (CPF repetido → **409** com `conflict_with`) |
 | GET | `/clients` | Lista todos os clientes |
+| GET | `/clients/by-cpf/{cpf}` | Busca cliente por CPF (acha mesmo inativo) |
 | GET | `/clients/{id}` | Busca cliente por ID |
-| PUT | `/clients/{id}` | Atualiza campos do cliente (partial update) |
+| PUT | `/clients/{id}` | Atualiza campos do cliente (partial update; `is_active=true` reativa) |
 | DELETE | `/clients/{id}` | Soft-delete (marca `is_active=false` e `deleted_at`) |
 
 **Regras de validação no DTO:**
 - `cpf`: aceita máscara — 11 dígitos verificados pelo algoritmo oficial da Receita.
 - `whatsapp_number`: aceita máscara — número BR com DDD válido e celular (9 após DDD), normalizado para o formato `5511987654321`.
-- `client_status`: enum de 3 valores (`prospecto`, `ativo`, `inativo`) — espelha `CHECK` do banco.
+- `client_status`: enum de 3 valores (`prospect`, `active`, `inactive`) — espelha `CHECK` do banco.
+
+> **Reativação:** se o `POST` bater num CPF que já existe, a resposta **409** inclui
+> `conflict_with` (`id`, `name`, `is_active`) da aluna existente. O frontend usa isso pra
+> oferecer reativar (`PUT {is_active: true}`) em vez de só barrar — a reativação é sempre
+> uma decisão da recepção.
 
 ### Instructors (`/instructors`)
 
@@ -137,7 +143,51 @@ Acesse:
 
 **Regras de validação no DTO:**
 - `credential_number` (CREFITO): regex de formato + cross-field — obrigatório se `has_credential=true`.
-- `instructor_status`: enum de 5 valores (`ativo`, `ferias`, `afastado`, `banco_de_vagas`, `inativo`).
+- `instructor_status`: enum de 5 valores (`active`, `vacation`, `on_leave`, `standby`, `inactive`).
+
+### Plans (`/plans`)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/plans` | Cria um novo plano |
+| GET | `/plans` | Lista todos os planos |
+| GET | `/plans/{id}` | Busca plano por ID |
+| PUT | `/plans/{id}` | Atualiza campos do plano (partial update) |
+| DELETE | `/plans/{id}` | Soft-delete |
+
+**Regras de validação no DTO:**
+- `sessions_per_month`: inteiro `> 0`.
+- `monthly_fee`: `Decimal` (não float — dinheiro!) `>= 0`, mapeado para `numeric(10,2)`.
+
+### Anamneses (`/anamneses`)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/anamneses` | Cria uma anamnese (1:1 com client) |
+| GET | `/anamneses` | Lista todas as anamneses |
+| GET | `/anamneses/{id}` | Busca anamnese por ID |
+| PUT | `/anamneses/{id}` | Atualiza campos da anamnese (partial update) |
+| DELETE | `/anamneses/{id}` | Soft-delete |
+
+**Regras de validação no DTO:**
+- `client_id`: o cliente precisa existir (senão **404**); só uma anamnese por cliente (`UNIQUE` → **409**).
+- Pares flag/descrição no Create: marcou `true` numa pergunta (ex.: `previous_illness`), a descrição vira obrigatória.
+
+## Frontend (painel administrativo)
+
+Painel em **HTML + CSS + JavaScript puro** (sem framework), em `frontend/`. É um sistema
+config-driven: `js/entities.js` descreve cada entidade e o `js/app.js` monta formulário e
+tabela dinamicamente. Cobre as 4 entidades (sidebar troca de entidade), tem modo claro/escuro
+(segue o SO + botão), e o fluxo de reativação de cliente por CPF.
+
+```bash
+# com o backend rodando (uvicorn), sirva o frontend por HTTP — NÃO abra via file://,
+# senão o CORS do backend bloqueia as chamadas:
+cd frontend && python -m http.server 5500
+# abre: http://localhost:5500
+```
+
+> Se mudar a porta do backend, ajuste `API_BASE` em `frontend/js/api.js`.
 
 ## Gerenciamento do schema do banco
 
@@ -199,18 +249,21 @@ git commit -m "feat(db): update schema dump after <descrição da mudança>"
 
 ## Roadmap
 
-### Em andamento
-- [ ] Frontend simples (HTML + JS puro) para o CRUD do cliente
-- [ ] Reativar RLS no Supabase com policies adequadas
+### Concluído
+- [x] CRUD das 4 entidades: Client, Instructor, Plan, Anamnese
+- [x] Frontend (painel config-driven) cobrindo as 4 entidades, com modo claro/escuro
+- [x] Reativação de cliente + busca por CPF
 
-### Pós-MVP
+### Próximos passos
+- [ ] Reativar RLS no Supabase com policies adequadas
+- [ ] Modelagem das entidades restantes: Client_Plan (matrícula), Booking, Schedule, Waitlist
+- [ ] Aula experimental (registro no banco + Google Calendar)
+- [ ] Agente conversacional (FastAPI + Claude Sonnet 4.6, tool calling) — orquestração via n8n + WhatsApp
 - [ ] Migrar `class Config` → `model_config = ConfigDict(...)` (Pydantic v2 idiomático)
 - [ ] Logger estruturado (`app/core/logger.py`)
-- [ ] Modelagem das entidades restantes: Anamnese, Plano, Aluno_Plano, Agenda, Agendamento, Lista_Espera
 - [ ] Testes automatizados com `pytest` e `FastAPI TestClient`
 - [ ] Trigger PostgreSQL para auto-update de `updated_at`
 - [ ] Autenticação JWT
-- [ ] Integração com n8n + LLM (agente conversacional WhatsApp)
 - [ ] Migração do gerenciador de pacotes para `uv`
 
 ## Equipe
