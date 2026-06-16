@@ -11,6 +11,7 @@ from app.api import instructor as instructor_router
 from app.api import client as client_router
 from app.api import plan as plan_router
 from app.api import anamnesis as anamnesis_router
+from app.api import client_plan as client_plan_router
 from app.core.exceptions import ConflictError, NotFoundError
 
 
@@ -66,6 +67,7 @@ app.include_router(client_router.router)
 app.include_router(instructor_router.router)
 app.include_router(plan_router.router)
 app.include_router(anamnesis_router.router)
+app.include_router(client_plan_router.router)
 
 @app.get("/", tags=["Health"])
 def root():

@@ -322,6 +322,14 @@ function formatDateTime(value) {
     return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
+// Data pura (vem como "YYYY-MM-DD"). Faço o parse manual de propósito: new Date()
+// numa data sem hora assume UTC e, no nosso fuso, pode "voltar" um dia.
+function formatDate(value) {
+    const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return String(value);
+    return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
 // Traduz o valor de um enum (ex.: "prospect") para o label em PT ("Prospecto"),
 // usando as próprias options definidas no ENTITIES.
 function enumLabel(entity, key, value) {
@@ -339,6 +347,7 @@ function formatValue(value, col, entity) {
         case "brl": return formatBRL(value);
         case "bool": return value ? "Sim" : "Não";
         case "datetime": return formatDateTime(value);
+        case "date": return formatDate(value);
         case "enum": return enumLabel(entity, col.key, value);
         default: return String(value);
     }

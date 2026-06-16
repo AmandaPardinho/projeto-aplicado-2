@@ -93,6 +93,27 @@ const ENTITIES = {
         ],
     },
 
+    client_plans: {
+        label: "Matrículas",
+        endpoint: "/client_plans",
+        fields: [
+            { name: "client_id", label: "ID da aluna (UUID)", type: "text", actions: ["create"], required: true, placeholder: "cole o UUID da cliente" },
+            { name: "plan_id", label: "ID do plano (UUID)", type: "text", actions: ["create"], required: true, placeholder: "cole o UUID do plano" },
+            // start_date é opcional: vazio = hoje (o service preenche). O vencimento é derivado (+1 ano), não aparece aqui.
+            { name: "start_date", label: "Início da matrícula", type: "date", actions: ["create"] },
+            // renewal_date é manual: vazio na 1ª matrícula; data da rematrícula se a aluna já fazia antes.
+            { name: "renewal_date", label: "Data de renovação (rematrícula)", type: "date", actions: ["create", "update"] },
+            { name: "is_active", label: "Matrícula ativa (desmarque = desativar)", type: "checkbox", actions: ["update"], default: true },
+        ],
+        columns: [
+            { key: "client_id", label: "Aluna (ID)" },
+            { key: "plan_id", label: "Plano (ID)" },
+            { key: "start_date", label: "Início", format: "date" },
+            { key: "end_date", label: "Vencimento", format: "date" },
+            { key: "renewal_date", label: "Renovação", format: "date" },
+        ],
+    },
+
     anamneses: {
         label: "Anamneses",
         endpoint: "/anamneses",
