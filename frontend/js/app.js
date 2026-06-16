@@ -23,6 +23,19 @@ const BUTTON_LABEL = {
     "find-cpf": "Buscar por CPF",
 };
 
+// Ícones SVG inline (estilo Lucide). O container leva aria-hidden — o rótulo ao lado já informa.
+const ICON = {
+    idle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
+    loading: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>',
+    ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
+    sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>',
+};
+
+// Rótulo padrão de cada estado da saída do servidor
+const STATUS_LABEL = { idle: "Aguardando ação", loading: "Enviando…", ok: "Sucesso", error: "Erro" };
+
 // ===== Estado da tela =====
 let currentEntityKey = "clients"; // qual entidade está selecionada
 let currentAction = "create";     // qual ação está selecionada
@@ -35,7 +48,10 @@ const actionSelect = document.querySelector("#action");
 const formFields = document.querySelector("#form-fields");
 const formHint = document.querySelector("#form-hint");
 const submitButton = form.querySelector("button[type='submit']");
-const output = document.querySelector("#output");
+const output = document.querySelector("#output");           // o <pre> com o corpo (JSON)
+const outputWrap = document.querySelector("#server-output"); // wrapper que leva o data-state
+const statusIcon = outputWrap.querySelector(".status-icon");
+const statusLabel = outputWrap.querySelector(".status-label");
 const tableCard = document.querySelector("#table-card");
 const tableHead = document.querySelector("#table-head");
 const tableBody = document.querySelector("#table-body");
@@ -71,7 +87,9 @@ function selectEntity(key) {
 
 // Monta o <select> de ações: as 5 padrão + as extras da entidade (ex.: Buscar por CPF).
 function renderActionOptions(entity) {
-    const all = [...BASE_ACTIONS, ...(entity.extraActions || [])];
+    // ordem alfabética pelo rótulo que a usuária lê (pt-BR cuida dos acentos)
+    const all = [...BASE_ACTIONS, ...(entity.extraActions || [])]
+        .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
     actionSelect.innerHTML = all
         .map((a) => `<option value="${a.value}">${a.label}</option>`)
         .join("");
@@ -85,6 +103,11 @@ function renderActionOptions(entity) {
    ============================================================ */
 function fieldToHtml(field) {
     const id = `f-${field.name}`;
+    // "*" sempre que o campo for obrigatório e a ação não for atualizar (no PUT tudo é parcial).
+    // aria-required avisa o leitor de tela; o "*" visual fica aria-hidden pra não duplicar.
+    const required = field.required && currentAction !== "update";
+    const star = required ? ' <span class="req" aria-hidden="true">*</span>' : "";
+    const ariaReq = required ? ' aria-required="true"' : "";
 
     if (field.type === "checkbox") {
         const checked = field.default ? "checked" : "";
@@ -103,8 +126,8 @@ function fieldToHtml(field) {
             .join("");
         return `
             <div class="field">
-                <label for="${id}">${field.label}</label>
-                <select id="${id}" name="${field.name}">${opts}</select>
+                <label for="${id}">${field.label}${star}</label>
+                <select id="${id}" name="${field.name}"${ariaReq}>${opts}</select>
             </div>`;
     }
 
@@ -118,8 +141,8 @@ function fieldToHtml(field) {
 
     return `
         <div class="field">
-            <label for="${id}">${field.label}</label>
-            <input id="${id}" name="${field.name}" ${attrs}>
+            <label for="${id}">${field.label}${star}</label>
+            <input id="${id}" name="${field.name}" ${attrs}${ariaReq}>
         </div>`;
 }
 
@@ -127,8 +150,8 @@ function fieldToHtml(field) {
 function idFieldHtml() {
     return `
         <div class="field">
-            <label for="f-id">ID (UUID)</label>
-            <input id="f-id" name="id" type="text" placeholder="cole o UUID aqui">
+            <label for="f-id">ID (UUID) <span class="req" aria-hidden="true">*</span></label>
+            <input id="f-id" name="id" type="text" aria-required="true" placeholder="cole o UUID aqui">
         </div>`;
 }
 
@@ -191,12 +214,16 @@ function collectFields() {
 /* ============================================================
    4. Saída do servidor (#output) com estados visuais
    ============================================================ */
-function setOutput(state, text) {
-    output.dataset.state = state;
-    output.textContent = text;
+// state pinta o ícone+rótulo+moldura; body é o JSON cru (some quando vazio); label sobrescreve o padrão.
+function setOutput(state, body = "", label) {
+    outputWrap.dataset.state = state;
+    statusIcon.innerHTML = ICON[state] || "";
+    statusLabel.textContent = label || STATUS_LABEL[state] || "";
+    output.textContent = body;
+    output.classList.toggle("hidden", !body); // sem corpo, esconde o <pre>
 }
 function clearOutput() {
-    setOutput("idle", "Aguardando ação...");
+    setOutput("idle");
 }
 
 /* ============================================================
@@ -260,9 +287,9 @@ async function reactivateClient(endpoint, id, extra, successPrefix) {
         const result = await api.update(endpoint, id, { ...extra, is_active: true });
         clearPrompt();
         hideTable();
-        setOutput("ok", successPrefix + "\n" + JSON.stringify(result, null, 2));
+        setOutput("ok", JSON.stringify(result, null, 2), successPrefix);
     } catch (err) {
-        setOutput("error", "❌ Erro ao reativar:\n" + err.message);
+        setOutput("error", err.message, "Erro ao reativar");
     }
 }
 
@@ -366,7 +393,8 @@ form.addEventListener("submit", async (event) => {
     delete data.id;     // o id vai pela URL, não no corpo
 
     clearPrompt();
-    setOutput("loading", "⏳ Enviando...");
+    setOutput("loading");
+    submitButton.disabled = true; // trava o botão enquanto a requisição está no ar
 
     try {
         let response;
@@ -397,25 +425,27 @@ form.addEventListener("submit", async (event) => {
                 showClientFoundPrompt(response, {
                     reactivateLabel: `Reativar ${response.name}`,
                     onReactivate: (found) =>
-                        reactivateClient(entity.endpoint, found.id, {}, "✅ Cliente reativado:"),
+                        reactivateClient(entity.endpoint, found.id, {}, "Cliente reativado"),
                 });
                 break;
         }
-        setOutput("ok", "✅ Sucesso:\n" + JSON.stringify(response, null, 2));
+        setOutput("ok", JSON.stringify(response, null, 2));
     } catch (error) {
         // 409 com conflict_with = CPF repetido. Em vez de só barrar, oferece a
         // decisão de reativar (reativa E atualiza com os dados recém-digitados).
         const conflict = (error.status === 409 && error.body) ? error.body.conflict_with : null;
         if (conflict) {
-            setOutput("error", "❌ " + error.message);
+            setOutput("error", error.message);
             showClientFoundPrompt(conflict, {
                 reactivateLabel: `Reativar e atualizar ${conflict.name}`,
                 onReactivate: (found) =>
-                    reactivateClient(entity.endpoint, found.id, data, "✅ Cliente reativado e atualizado:"),
+                    reactivateClient(entity.endpoint, found.id, data, "Cliente reativado e atualizado"),
             });
         } else {
-            setOutput("error", "❌ Erro:\n" + error.message);
+            setOutput("error", error.message);
         }
+    } finally {
+        submitButton.disabled = false; // libera o botão de volta (deu certo ou não)
     }
 });
 
@@ -427,7 +457,10 @@ const prefersDark = matchMedia("(prefers-color-scheme: dark)");
 function applyMode(mode) {
     document.documentElement.dataset.mode = mode;
     // o botão mostra a AÇÃO (pra onde vai ao clicar), não o estado atual
-    modeToggle.textContent = mode === "dark" ? "☀ Modo claro" : "☾ Modo escuro";
+    const goingToLight = mode === "dark";
+    modeToggle.innerHTML =
+        (goingToLight ? ICON.sun : ICON.moon) +
+        `<span>${goingToLight ? "Modo claro" : "Modo escuro"}</span>`;
     modeToggle.setAttribute("aria-pressed", mode === "dark");
 }
 

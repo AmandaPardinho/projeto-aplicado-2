@@ -26,11 +26,11 @@ const ENTITIES = {
             { value: "find-cpf", label: "Buscar por CPF" },
         ],
         fields: [
-            { name: "name", label: "Nome", type: "text", actions: ["create", "update"], placeholder: "Maria Silva" },
-            { name: "cpf", label: "CPF", type: "text", actions: ["create", "find-cpf"], mask: "cpf", placeholder: "000.000.000-00" },
-            { name: "birth_date", label: "Data de nascimento", type: "date", actions: ["create"] },
-            { name: "whatsapp_number", label: "WhatsApp", type: "text", actions: ["create", "update"], mask: "whatsapp", placeholder: "(11) 98765-4321" },
-            { name: "email", label: "E-mail", type: "email", actions: ["create", "update"], placeholder: "maria@exemplo.com" },
+            { name: "name", label: "Nome", type: "text", actions: ["create", "update"], required: true, placeholder: "Maria Silva" },
+            { name: "cpf", label: "CPF", type: "text", actions: ["create", "find-cpf"], required: true, mask: "cpf", placeholder: "000.000.000-00" },
+            { name: "birth_date", label: "Data de nascimento", type: "date", actions: ["create"], required: true },
+            { name: "whatsapp_number", label: "WhatsApp", type: "text", actions: ["create", "update"], required: true, mask: "whatsapp", placeholder: "(11) 98765-4321" },
+            { name: "email", label: "E-mail", type: "email", actions: ["create", "update"], required: true, placeholder: "maria@exemplo.com" },
             {
                 name: "client_status", label: "Status comercial", type: "select", actions: ["create", "update"], options: [
                     { value: "prospect", label: "Prospecto" },
@@ -53,8 +53,8 @@ const ENTITIES = {
         label: "Instrutores",
         endpoint: "/instructors",
         fields: [
-            { name: "name", label: "Nome", type: "text", actions: ["create", "update"], placeholder: "João Souza" },
-            { name: "email", label: "E-mail", type: "email", actions: ["create", "update"], placeholder: "joao@exemplo.com" },
+            { name: "name", label: "Nome", type: "text", actions: ["create", "update"], required: true, placeholder: "João Souza" },
+            { name: "email", label: "E-mail", type: "email", actions: ["create", "update"], required: true, placeholder: "joao@exemplo.com" },
             { name: "has_credential", label: "Possui credencial (CREFITO)", type: "checkbox", actions: ["create", "update"], default: false },
             { name: "credential_number", label: "Número da credencial", type: "text", actions: ["create", "update"], placeholder: "obrigatório se marcou acima" },
             { name: "specialty", label: "Especialidade", type: "text", actions: ["create", "update"], placeholder: "Pilates clínico" },
@@ -81,9 +81,9 @@ const ENTITIES = {
         label: "Planos",
         endpoint: "/plans",
         fields: [
-            { name: "name", label: "Nome do plano", type: "text", actions: ["create", "update"], placeholder: "8 sessões / mês" },
-            { name: "sessions_per_month", label: "Sessões por mês", type: "number", actions: ["create", "update"], min: 1, placeholder: "8" },
-            { name: "monthly_fee", label: "Mensalidade (R$)", type: "number", actions: ["create", "update"], min: 0, step: "0.01", placeholder: "199.90" },
+            { name: "name", label: "Nome do plano", type: "text", actions: ["create", "update"], required: true, placeholder: "8 sessões / mês" },
+            { name: "sessions_per_month", label: "Sessões por mês", type: "number", actions: ["create", "update"], required: true, min: 1, placeholder: "8" },
+            { name: "monthly_fee", label: "Mensalidade (R$)", type: "number", actions: ["create", "update"], required: true, min: 0, step: "0.01", placeholder: "199.90" },
             { name: "is_active", label: "Plano ativo (desmarque = desativar)", type: "checkbox", actions: ["update"], default: true },
         ],
         columns: [
@@ -97,7 +97,7 @@ const ENTITIES = {
         label: "Anamneses",
         endpoint: "/anamneses",
         fields: [
-            { name: "client_id", label: "ID da aluna (UUID)", type: "text", actions: ["create"], placeholder: "cole o UUID da cliente" },
+            { name: "client_id", label: "ID da aluna (UUID)", type: "text", actions: ["create"], required: true, placeholder: "cole o UUID da cliente" },
             { name: "previous_illness", label: "Possui doença prévia?", type: "checkbox", actions: ["create", "update"], default: false },
             { name: "illness_description", label: "Descrição da doença", type: "text", actions: ["create", "update"] },
             { name: "specific_complaint", label: "Possui queixa específica?", type: "checkbox", actions: ["create", "update"], default: false },

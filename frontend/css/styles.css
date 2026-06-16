@@ -240,6 +240,9 @@ h2 {
 
 .mode-toggle {
     width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     text-align: left;
     cursor: pointer;
     font: inherit;
@@ -250,6 +253,12 @@ h2 {
     border-radius: var(--radius-sm);
     padding: 9px 12px;
     transition: background .15s;
+}
+
+.mode-toggle svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
 }
 
 .mode-toggle:hover {
@@ -263,7 +272,8 @@ h2 {
 
 .foot-note {
     font-size: 12px;
-    color: #7F8C85;
+    /* clareado p/ passar o contraste mínimo (AA 4.5:1) sobre a sidebar escura */
+    color: #8E9C95;
 }
 
 /* ===== Main ===== */
@@ -357,10 +367,18 @@ h2 {
     color: var(--ink);
 }
 
+/* asterisco de campo obrigatório */
+.req {
+    color: var(--danger);
+    font-weight: 700;
+}
+
 input,
 select {
     width: 100%;
     font: inherit;
+    /* 16px evita o zoom automático do Safari iOS ao focar o campo */
+    font-size: 16px;
     color: var(--ink);
     /* leve tom da marca no fundo; clareia pra surface ao focar */
     background: var(--field-bg);
@@ -418,6 +436,12 @@ select:focus {
 
 .btn-primary:hover {
     background: var(--brand-hover);
+}
+
+/* trava visual enquanto a requisição está no ar (ver app.js) */
+.btn-primary:disabled {
+    opacity: .55;
+    cursor: progress;
 }
 
 .btn-primary:focus-visible {
@@ -492,19 +516,57 @@ select:focus {
     color: var(--ink);
 }
 
-.output[data-state="ok"] {
+/* linha de status: ícone SVG + rótulo. A cor vem do estado no wrapper. */
+.output-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.status-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.status-icon svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+#server-output[data-state="ok"] .output-status {
+    color: var(--brand-accent);
+}
+
+#server-output[data-state="error"] .output-status {
+    color: var(--danger);
+}
+
+/* o spinner gira só no estado "loading" (respeita reduced-motion lá embaixo) */
+#server-output[data-state="loading"] .status-icon svg {
+    animation: spin .9s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* o corpo (JSON) herda a moldura do estado */
+#server-output[data-state="ok"] .output {
     border-color: var(--brand);
     background: var(--brand-soft);
 }
 
-.output[data-state="error"] {
+#server-output[data-state="error"] .output {
     border-color: var(--danger);
     background: var(--danger-soft);
     color: var(--danger-ink);
-}
-
-.output[data-state="loading"] {
-    color: var(--muted);
 }
 
 /* ===== Tabela ===== */
@@ -562,7 +624,19 @@ td.empty {
         gap: 16px;
     }
 
+    /* o toggle de tema precisa continuar acessível no mobile;
+       escondemos só a legenda pra economizar espaço */
     .sidebar-foot {
+        margin: 0 0 0 auto;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .mode-toggle {
+        width: auto;
+    }
+
+    .foot-note {
         display: none;
     }
 
@@ -592,5 +666,6 @@ td.empty {
 @media (prefers-reduced-motion: reduce) {
     * {
         transition: none !important;
+        animation: none !important;
     }
 }

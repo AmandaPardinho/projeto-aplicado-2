@@ -38,7 +38,7 @@
             </div>
             <nav class="nav" id="nav" aria-label="Entidades"></nav>
             <div class="sidebar-foot">
-                <button type="button" id="mode-toggle" class="mode-toggle" aria-pressed="false">☾ Escuro</button>
+                <button type="button" id="mode-toggle" class="mode-toggle" aria-pressed="false"><span>Modo escuro</span></button>
                 <span class="foot-note">Painel administrativo · protótipo</span>
             </div>
         </aside>
@@ -74,7 +74,21 @@
                 <section class="card output-card">
                     <h2>Resposta do servidor</h2>
                     <div id="action-prompt" class="action-prompt hidden"></div>
-                    <pre id="output" class="output" data-state="idle">Aguardando ação...</pre>
+                    <!-- data-state pinta status + corpo conforme o resultado (idle/loading/ok/error) -->
+                    <div id="server-output" data-state="idle">
+                        <!-- o aria-live fica no status: o leitor de tela anuncia "Sucesso"/"Erro",
+                             não o JSON inteiro (que seria barulho) -->
+                        <p class="output-status" aria-live="polite" aria-atomic="true">
+                            <span class="status-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                </svg>
+                            </span>
+                            <span class="status-label">Aguardando ação</span>
+                        </p>
+                        <pre id="output" class="output hidden"></pre>
+                    </div>
                 </section>
             </div>
 
