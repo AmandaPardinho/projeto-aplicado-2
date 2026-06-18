@@ -132,8 +132,11 @@ Access:
 | DELETE | `/clients/{id}` | Soft-delete (sets `is_active=false` and `deleted_at`) |
 
 **DTO validation rules:**
-- `cpf`: accepts a mask — 11 digits verified by the official Receita algorithm.
-- `whatsapp_number`: accepts a mask — BR number with a valid area code and mobile (9 after the area code), normalized to the format `5511987654321`.
+- `name`: letters, spaces, hyphen and apostrophe only (no numbers/emoji/symbols), min 3 letters — **DB `CHECK` + Pydantic**. Stored in natural case (shown uppercase via CSS).
+- `cpf`: accepts a mask — 11 digits verified by the official Receita algorithm (rejects repeated sequences); `UNIQUE`.
+- `email`: format validated (Pydantic + DB `CHECK`), normalized to lowercase.
+- `birth_date`: not in the future; age between **4 and 120**; year capped at 4 digits.
+- `whatsapp_number`: accepts a mask — BR number with a **real area code** (official DDD list) and mobile (9 after the area code), normalized to `5511987654321`.
 - `client_status`: enum of 3 values (`prospect`, `active`, `inactive`) — mirrors the database `CHECK`.
 
 > **Reactivation:** if the `POST` hits a CPF that already exists, the **409** response includes
@@ -152,7 +155,9 @@ Access:
 | DELETE | `/instructors/{id}` | Soft-delete |
 
 **DTO validation rules:**
-- `credential_number` (CREFITO): format regex + cross-field — required if `has_credential=true`.
+- `name`: same rule as the client (letters only, min 3 letters) — DB `CHECK` + Pydantic.
+- `email`: format validated, normalized to lowercase.
+- `credential_number`: **generic professional registration** (CREF, CREFITO, CRM... or none — not tied to a single council). Digits with an optional category letter and UF suffix (e.g. `12345-G/SP`). Cross-field **both ways**: required if `has_credential=true`, and must be empty if `has_credential=false`.
 - `instructor_status`: enum of 5 values (`active`, `vacation`, `on_leave`, `standby`, `inactive`).
 
 #### Plans (`/plans`)
@@ -166,8 +171,9 @@ Access:
 | DELETE | `/plans/{id}` | Soft-delete |
 
 **DTO validation rules:**
-- `sessions_per_month`: integer `> 0`.
-- `monthly_fee`: `Decimal` (not float — it's money!) `>= 0`, mapped to `numeric(10,2)`.
+- `name`: free text (numbers/slash allowed), trimmed, non-blank — DB `CHECK` + Pydantic.
+- `sessions_per_month`: integer between **1 and 31** — DB `CHECK` + Pydantic.
+- `monthly_fee`: `Decimal` (not float — it's money!) between **0 and 100000** (0 = trial class), mapped to `numeric(10,2)` — DB `CHECK` + Pydantic.
 
 #### Anamneses (`/anamneses`)
 
@@ -181,7 +187,7 @@ Access:
 
 **DTO validation rules:**
 - `client_id`: the client must exist (otherwise **404**); only one anamnesis per client (`UNIQUE` → **409**).
-- Flag/description pairs in Create: if you mark `true` on a question (e.g. `previous_illness`), the description becomes required.
+- Flag/description pairs in Create, **both ways**: mark `true` on a question (e.g. `previous_illness`) → the description becomes required; mark `false` → the description must be empty (no orphan text).
 
 #### Client Plans (`/client_plans`)
 
@@ -198,9 +204,10 @@ The enrollment — links a client to a plan.
 **DTO validation rules:**
 - `client_id` / `plan_id`: both must exist (otherwise **404**).
 - `end_date`: derived in the service as `start_date + 1 year` (not user-provided).
-- `start_date`: optional (defaults to today) and **immutable** after creation (PostgreSQL trigger).
-- `renewal_date`: manual (empty on the first enrollment).
+- `start_date`: optional (defaults to today) and **immutable** after creation (PostgreSQL trigger); the frontend bounds it to today, the backend caps the year at 4 digits.
+- `renewal_date`: manual (empty on the first enrollment); frontend bounds it to today+5y.
 - One active plan per client (partial `UNIQUE` index `WHERE is_active`) → **409** with `conflict_with`, which enables the plan-switch flow.
+- `anamnesis_pending`: **derived** field in the read response (not a DB column) — `true` when the client has no active anamnesis. It's the "pending anamnesis" flag the frontend shows on the enrollment list.
 
 ### Frontend (admin panel)
 
@@ -436,8 +443,11 @@ Acesse:
 | DELETE | `/clients/{id}` | Soft-delete (marca `is_active=false` e `deleted_at`) |
 
 **Regras de validação no DTO:**
-- `cpf`: aceita máscara — 11 dígitos verificados pelo algoritmo oficial da Receita.
-- `whatsapp_number`: aceita máscara — número BR com DDD válido e celular (9 após DDD), normalizado para o formato `5511987654321`.
+- `name`: só letras, espaço, hífen e apóstrofo (sem número/emoji/símbolo), mín. 3 letras — **`CHECK` no banco + Pydantic**. Guardado na caixa natural (exibido em maiúsculo via CSS).
+- `cpf`: aceita máscara — 11 dígitos verificados pelo algoritmo oficial da Receita (rejeita sequência repetida); `UNIQUE`.
+- `email`: formato validado (Pydantic + `CHECK` no banco), normalizado para minúsculo.
+- `birth_date`: não pode ser futura; idade entre **4 e 120**; ano limitado a 4 dígitos.
+- `whatsapp_number`: aceita máscara — número BR com **DDD que existe de verdade** (lista oficial) e celular (9 após DDD), normalizado para `5511987654321`.
 - `client_status`: enum de 3 valores (`prospect`, `active`, `inactive`) — espelha `CHECK` do banco.
 
 > **Reativação:** se o `POST` bater num CPF que já existe, a resposta **409** inclui
@@ -456,7 +466,9 @@ Acesse:
 | DELETE | `/instructors/{id}` | Soft-delete |
 
 **Regras de validação no DTO:**
-- `credential_number` (CREFITO): regex de formato + cross-field — obrigatório se `has_credential=true`.
+- `name`: mesma regra do cliente (só letras, mín. 3 letras) — `CHECK` no banco + Pydantic.
+- `email`: formato validado, normalizado para minúsculo.
+- `credential_number`: **registro profissional genérico** (CREF, CREFITO, CRM... ou nenhum — não preso a um conselho). Dígitos com sufixo opcional de categoria e UF (ex.: `12345-G/SP`). Cross-field **nos dois sentidos**: obrigatório se `has_credential=true`, e deve ficar vazio se `has_credential=false`.
 - `instructor_status`: enum de 5 valores (`active`, `vacation`, `on_leave`, `standby`, `inactive`).
 
 #### Plans (`/plans`)
@@ -470,8 +482,9 @@ Acesse:
 | DELETE | `/plans/{id}` | Soft-delete |
 
 **Regras de validação no DTO:**
-- `sessions_per_month`: inteiro `> 0`.
-- `monthly_fee`: `Decimal` (não float — dinheiro!) `>= 0`, mapeado para `numeric(10,2)`.
+- `name`: texto livre (número/barra ok), aparado, não-vazio — `CHECK` no banco + Pydantic.
+- `sessions_per_month`: inteiro entre **1 e 31** — `CHECK` no banco + Pydantic.
+- `monthly_fee`: `Decimal` (não float — dinheiro!) entre **0 e 100000** (0 = aula experimental), mapeado para `numeric(10,2)` — `CHECK` no banco + Pydantic.
 
 #### Anamneses (`/anamneses`)
 
@@ -485,7 +498,7 @@ Acesse:
 
 **Regras de validação no DTO:**
 - `client_id`: o cliente precisa existir (senão **404**); só uma anamnese por cliente (`UNIQUE` → **409**).
-- Pares flag/descrição no Create: marcou `true` numa pergunta (ex.: `previous_illness`), a descrição vira obrigatória.
+- Pares flag/descrição no Create, **nos dois sentidos**: marcou `true` numa pergunta (ex.: `previous_illness`) → a descrição vira obrigatória; marcou `false` → a descrição deve ficar vazia (sem texto órfão).
 
 #### Client Plans (`/client_plans`)
 
@@ -502,9 +515,10 @@ A matrícula — liga um cliente a um plano.
 **Regras de validação no DTO:**
 - `client_id` / `plan_id`: ambos precisam existir (senão **404**).
 - `end_date`: derivado no service como `start_date + 1 ano` (não é informado pela recepção).
-- `start_date`: opcional (default: hoje) e **imutável** após a criação (trigger no PostgreSQL).
-- `renewal_date`: manual (vazio na 1ª matrícula).
+- `start_date`: opcional (default: hoje) e **imutável** após a criação (trigger no PostgreSQL); o front limita a hoje, o back limita o ano a 4 dígitos.
+- `renewal_date`: manual (vazio na 1ª matrícula); o front limita a hoje+5 anos.
 - 1 plano ativo por cliente (índice `UNIQUE` parcial `WHERE is_active`) → **409** com `conflict_with`, que habilita o fluxo de troca de plano.
+- `anamnesis_pending`: campo **derivado** na resposta de leitura (não é coluna do banco) — `true` quando o cliente não tem anamnese ativa. É a flag de "anamnese pendente" que o front mostra na lista de matrículas.
 
 ### Frontend (painel administrativo)
 
