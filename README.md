@@ -183,6 +183,25 @@ Access:
 - `client_id`: the client must exist (otherwise **404**); only one anamnesis per client (`UNIQUE` → **409**).
 - Flag/description pairs in Create: if you mark `true` on a question (e.g. `previous_illness`), the description becomes required.
 
+#### Client Plans (`/client_plans`)
+
+The enrollment — links a client to a plan.
+
+| Method | Route | Description |
+|---|---|---|
+| POST | `/client_plans` | Create an enrollment (one active plan per client → **409** with `conflict_with`) |
+| GET | `/client_plans` | List all enrollments |
+| GET | `/client_plans/{id}` | Find an enrollment by ID |
+| PUT | `/client_plans/{id}` | Update enrollment fields (partial update; `is_active=true` reactivates) |
+| DELETE | `/client_plans/{id}` | Soft-delete |
+
+**DTO validation rules:**
+- `client_id` / `plan_id`: both must exist (otherwise **404**).
+- `end_date`: derived in the service as `start_date + 1 year` (not user-provided).
+- `start_date`: optional (defaults to today) and **immutable** after creation (PostgreSQL trigger).
+- `renewal_date`: manual (empty on the first enrollment).
+- One active plan per client (partial `UNIQUE` index `WHERE is_active`) → **409** with `conflict_with`, which enables the plan-switch flow.
+
 ### Frontend (admin panel)
 
 An admin panel in **plain HTML + CSS + JavaScript** (no framework), under `frontend/`. It's a
@@ -260,13 +279,15 @@ git commit -m "feat(db): update schema dump after <description of the change>"
 ### Roadmap
 
 #### Done
-- [x] CRUD for all 4 entities: Client, Instructor, Plan, Anamnesis
-- [x] Frontend (config-driven panel) covering the 4 entities, with light/dark mode
+- [x] CRUD for the 5 entities: Client, Instructor, Plan, Anamnesis, Client_Plan
+- [x] Frontend (config-driven panel) covering the 5 entities, with light/dark mode
 - [x] Client reactivation + lookup by CPF
+- [x] Client_Plan (enrollment): one active plan per client + plan-switch path
 
 #### Next steps
+- [ ] Client_Plan stage 2: plan-switch + renewal reminder
 - [ ] Re-enable RLS on Supabase with proper policies
-- [ ] Model the remaining entities: Client_Plan (enrollment), Booking, Schedule, Waitlist
+- [ ] Model the remaining entities: Booking, Schedule, Waitlist
 - [ ] Trial class (record in the database + Google Calendar)
 - [ ] Conversational agent (FastAPI + Claude Sonnet 4.6, tool calling) — orchestration via n8n + WhatsApp
 - [ ] Migrate `class Config` → `model_config = ConfigDict(...)` (idiomatic Pydantic v2)
@@ -466,6 +487,25 @@ Acesse:
 - `client_id`: o cliente precisa existir (senão **404**); só uma anamnese por cliente (`UNIQUE` → **409**).
 - Pares flag/descrição no Create: marcou `true` numa pergunta (ex.: `previous_illness`), a descrição vira obrigatória.
 
+#### Client Plans (`/client_plans`)
+
+A matrícula — liga um cliente a um plano.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/client_plans` | Cria uma matrícula (1 plano ativo por cliente → **409** com `conflict_with`) |
+| GET | `/client_plans` | Lista todas as matrículas |
+| GET | `/client_plans/{id}` | Busca uma matrícula por ID |
+| PUT | `/client_plans/{id}` | Atualiza a matrícula (partial update; `is_active=true` reativa) |
+| DELETE | `/client_plans/{id}` | Soft-delete |
+
+**Regras de validação no DTO:**
+- `client_id` / `plan_id`: ambos precisam existir (senão **404**).
+- `end_date`: derivado no service como `start_date + 1 ano` (não é informado pela recepção).
+- `start_date`: opcional (default: hoje) e **imutável** após a criação (trigger no PostgreSQL).
+- `renewal_date`: manual (vazio na 1ª matrícula).
+- 1 plano ativo por cliente (índice `UNIQUE` parcial `WHERE is_active`) → **409** com `conflict_with`, que habilita o fluxo de troca de plano.
+
 ### Frontend (painel administrativo)
 
 Painel em **HTML + CSS + JavaScript puro** (sem framework), em `frontend/`. É um sistema
@@ -543,13 +583,15 @@ git commit -m "feat(db): update schema dump after <descrição da mudança>"
 ### Roadmap
 
 #### Concluído
-- [x] CRUD das 4 entidades: Client, Instructor, Plan, Anamnese
-- [x] Frontend (painel config-driven) cobrindo as 4 entidades, com modo claro/escuro
+- [x] CRUD das 5 entidades: Client, Instructor, Plan, Anamnese, Client_Plan
+- [x] Frontend (painel config-driven) cobrindo as 5 entidades, com modo claro/escuro
 - [x] Reativação de cliente + busca por CPF
+- [x] Client_Plan (matrícula): 1 plano ativo por cliente + caminho de troca de plano
 
 #### Próximos passos
+- [ ] Client_Plan etapa 2: troca de plano + lembrete de renovação
 - [ ] Reativar RLS no Supabase com policies adequadas
-- [ ] Modelagem das entidades restantes: Client_Plan (matrícula), Booking, Schedule, Waitlist
+- [ ] Modelagem das entidades restantes: Booking, Schedule, Waitlist
 - [ ] Aula experimental (registro no banco + Google Calendar)
 - [ ] Agente conversacional (FastAPI + Claude Sonnet 4.6, tool calling) — orquestração via n8n + WhatsApp
 - [ ] Migrar `class Config` → `model_config = ConfigDict(...)` (Pydantic v2 idiomático)
