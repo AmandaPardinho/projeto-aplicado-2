@@ -9,7 +9,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.core.validators import normalize_name
 
 
 # 1) Entidade: o plano do jeito que está salvo no banco
@@ -37,8 +39,9 @@ class Plan(BaseModel):
 class PlanCreate(BaseModel):
     """Campos que o usuário manda no POST /plans pra cadastrar um plano."""
     name: str = Field(..., min_length=2, max_length=100, description="Nome do plano")
-    sessions_per_month: int = Field(..., gt=0, description="Quantidade de sessões por mês")
-    monthly_fee: Decimal = Field(..., ge=0, max_digits=10, decimal_places=2, description="Mensalidade do plano")
+    sessions_per_month: int = Field(..., gt=0, le=31, description="Quantidade de sessões por mês (máx. 31)")
+    monthly_fee: Decimal = Field(..., ge=0, le=100000, max_digits=10, decimal_places=2, description="Mensalidade do plano (0 = aula experimental, máx. R$ 100.000,00)")
+    _normalize_name = field_validator("name", mode="before")(normalize_name)
 
 # 3) O que devolvemos nos GETs
 # ===================================================================
@@ -54,6 +57,7 @@ class PlanRead(Plan):
 class PlanUpdate(BaseModel):
     """Campos do PUT /plans/{id}. Tudo opcional: manda só o que quer mudar."""
     name: Optional[str] = Field(None, min_length=2, max_length=100, description="Nome do plano")
-    sessions_per_month: Optional[int] = Field(None, gt=0, description="Quantidade de sessões por mês")
-    monthly_fee: Optional[Decimal] = Field(None, ge=0, max_digits=10, decimal_places=2, description="Mensalidade do plano")
+    sessions_per_month: Optional[int] = Field(None, gt=0, le=31, description="Quantidade de sessões por mês (máx. 31)")
+    monthly_fee: Optional[Decimal] = Field(None, ge=0, le=100000, max_digits=10, decimal_places=2, description="Mensalidade do plano (0 = aula experimental, máx. R$ 100.000,00)")
     is_active: Optional[bool] = None
+    _normalize_name = field_validator("name", mode="before")(normalize_name)

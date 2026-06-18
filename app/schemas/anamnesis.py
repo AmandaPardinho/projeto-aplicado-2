@@ -57,10 +57,13 @@ class AnamnesisCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_description_pairs(self):
-        """Se marcou "sim" numa pergunta, a descrição vira obrigatória.
+        """Mantém cada par flag↔descrição coerente nos dois sentidos.
 
-        Ex.: marcou previous_illness=True? Então illness_description não pode ficar
-        vazio. É a mesma ideia do has_credential/credential_number do instrutor.
+        - Marcou "sim"? A descrição vira obrigatória (não dá pra dizer que tem
+          uma doença e não descrever qual).
+        - Marcou "não"? A descrição não pode vir preenchida (descrição órfã numa
+          resposta "não" é contradição — o checkbox diz uma coisa, o texto outra).
+        É a mesma ideia do has_credential/credential_number do instrutor.
         """
         pairs = [
             ("previous_illness", "illness_description"),
@@ -69,8 +72,12 @@ class AnamnesisCreate(BaseModel):
             ("physical_restriction", "restriction_description"),
         ]
         for flag, description in pairs:
-            if getattr(self, flag) and not getattr(self, description):
+            flag_on = getattr(self, flag)
+            has_text = bool(getattr(self, description))
+            if flag_on and not has_text:
                 raise ValueError(f"{description} é obrigatório quando {flag}=True")
+            if not flag_on and has_text:
+                raise ValueError(f"{description} não deve ser preenchido quando {flag}=False")
         return self
 
 # 3) O que devolvemos nos GETs

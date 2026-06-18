@@ -1,8 +1,9 @@
 """
 Instrutor (instructor): quem dá as aulas no studio.
 
-Nem todo instrutor é fisioterapeuta com registro no conselho (CREFITO), então a
-credencial é opcional. Aqui ficam os modelos do Pydantic pro instrutor.
+O instrutor pode ser de qualquer área (educação física, fisioterapia, dança,
+medicina...), com ou sem conselho de classe — por isso o registro profissional
+é opcional e genérico, não preso ao CREFITO. Aqui ficam os modelos do Pydantic.
 """
 
 from datetime import datetime
@@ -11,7 +12,7 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
-from app.core.validators import validate_crefito
+from app.core.validators import validate_credential, validate_person_name, normalize_email_lower
 
 
 class InstructorStatus(str, Enum):
@@ -48,22 +49,27 @@ class Instructor(BaseModel):
 
 class InstructorCreate(BaseModel):
     """Campos que o usuário manda no POST /instructors pra cadastrar um instrutor."""
-    name: str = Field(..., min_length=2, max_length=100, description="Nome do instrutor")
+    name: str = Field(..., max_length=100, description="Nome do instrutor")
     email: EmailStr = Field(..., description="E-mail do instrutor")
     has_credential: bool = False
     credential_number: Optional[str] = None
     specialty: Optional[str] = Field(None, max_length=100)
     instructor_status: InstructorStatus = InstructorStatus.ACTIVE
-    _validate_crefito = field_validator("credential_number")(validate_crefito)
+    _normalize_name = field_validator("name", mode="before")(validate_person_name)
+    _normalize_email = field_validator("email", mode="before")(normalize_email_lower)
+    _validate_credential = field_validator("credential_number")(validate_credential)
 
     @model_validator(mode="after")
     def validate_credential_consistency(self):
-        """Se marcou que tem credencial, o número vira obrigatório.
+        """Mantém o par has_credential ↔ credential_number coerente nos dois sentidos.
 
-        Não dá pra dizer has_credential=True e deixar o credential_number vazio.
+        - Marcou que tem registro? Então o número é obrigatório.
+        - Marcou que NÃO tem? Então não pode mandar um número órfão pendurado.
         """
         if self.has_credential and not self.credential_number:
             raise ValueError("credential_number é obrigatório quando has_credential=True")
+        if not self.has_credential and self.credential_number:
+            raise ValueError("credential_number não deve ser preenchido quando has_credential=False")
         return self
 
 # 3) O que devolvemos nos GETs
@@ -78,11 +84,13 @@ class InstructorRead(Instructor):
 
 class InstructorUpdate(BaseModel):
     """Campos do PUT /instructors/{id}. Tudo opcional: manda só o que mudou."""
-    name: Optional[str] = Field(None, min_length=2, max_length=100, description="Nome do instrutor")
+    name: Optional[str] = Field(None, max_length=100, description="Nome do instrutor")
     email: Optional[EmailStr] = Field(None, description="E-mail do instrutor")
     has_credential: Optional[bool] = None
     credential_number: Optional[str] = None
     specialty: Optional[str] = Field(None, max_length=100)
     instructor_status: Optional[InstructorStatus] = None
     is_active: Optional[bool] = None
-    _validate_crefito = field_validator("credential_number")(validate_crefito)
+    _normalize_name = field_validator("name", mode="before")(validate_person_name)
+    _normalize_email = field_validator("email", mode="before")(normalize_email_lower)
+    _validate_credential = field_validator("credential_number")(validate_credential)

@@ -38,10 +38,10 @@ def update(instructor_id: UUID, data: InstructorUpdate) -> Optional[Instructor]:
     if not update_data:
         raise ValueError("Nenhum campo para atualizar")
 
-    # Regra do CREFITO: como o update é parcial, pra saber se "has_credential=True
-    # exige credential_number" eu preciso olhar o estado final (o que veio no PUT +
-    # o que já está salvo no banco), não só o payload. Só vou no banco se o update
-    # mexeu na credencial — senão seria uma consulta à toa.
+    # Regra do registro profissional: como o update é parcial, pra saber se
+    # "has_credential=True exige credential_number" eu preciso olhar o estado final
+    # (o que veio no PUT + o que já está salvo no banco), não só o payload. Só vou
+    # no banco se o update mexeu na credencial — senão seria uma consulta à toa.
     if "has_credential" in update_data or "credential_number" in update_data:
         current = repo.get_by_id(instructor_id)
         if current is None:

@@ -8,7 +8,9 @@ Entidade de junção entre client e plan, mas com dados próprios da matrícula
 from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.core.validators import validate_date_year
 
 
 # 1) Entidade: a matrícula do jeito que está salva no banco
@@ -46,14 +48,24 @@ class ClientPlanCreate(BaseModel):
     plan_id: UUID = Field(..., description="ID do plano contratado")
     start_date: Optional[date] = Field(None, description="Início da matrícula (default: hoje)")
     renewal_date: Optional[date] = Field(None, description="Data da rematrícula (vazio na 1ª vez)")
+    _check_start_year = field_validator("start_date", mode="before")(validate_date_year)
+    _check_renewal_year = field_validator("renewal_date", mode="before")(validate_date_year)
 
 
 # 3) O que devolvemos nos GETs
 # ===================================================================
 
 class ClientPlanRead(ClientPlan):
-    """O que sai nos GETs. Separado da entidade só pra não misturar leitura e escrita."""
-    pass
+    """O que sai nos GETs.
+
+    Além das colunas do banco, carrega `anamnesis_pending`: um campo DERIVADO
+    (não existe na tabela) que o service calcula — True quando a aluna não tem
+    anamnese ativa. É a flag que o front mostra como "anamnese pendente".
+    """
+    anamnesis_pending: bool = Field(
+        False,
+        description="True se a aluna não tem anamnese ativa (ficha de saúde pendente).",
+    )
 
 
 # 4) O que chega no PUT pra editar uma matrícula
@@ -68,3 +80,4 @@ class ClientPlanUpdate(BaseModel):
     """
     renewal_date: Optional[date] = None
     is_active: Optional[bool] = None
+    _check_renewal_year = field_validator("renewal_date", mode="before")(validate_date_year)

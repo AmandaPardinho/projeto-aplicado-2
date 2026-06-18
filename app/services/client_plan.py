@@ -8,11 +8,28 @@ from datetime import date
 from typing import Optional
 from uuid import UUID
 
-from app.schemas.client_plan import ClientPlan, ClientPlanCreate, ClientPlanUpdate
+from app.schemas.client_plan import ClientPlan, ClientPlanCreate, ClientPlanRead, ClientPlanUpdate
 from app.repositories import client_plan as repo
 from app.repositories import client as client_repo
 from app.repositories import plan as plan_repo
+from app.repositories import anamnesis as anamnesis_repo
 from app.core.exceptions import ConflictError, NotFoundError
+
+
+def _to_read(plan: ClientPlan, active_client_ids: Optional[set[str]] = None) -> ClientPlanRead:
+    """Acrescenta a flag derivada `anamnesis_pending` a uma matrícula.
+
+    - Na listagem, recebo o conjunto de quem TEM anamnese ativa (1 query só).
+    - Num registro isolado (create/get/update), consulto a anamnese daquela aluna.
+    Pendente = a aluna não tem nenhuma anamnese ativa.
+    """
+    if active_client_ids is not None:
+        pending = str(plan.client_id) not in active_client_ids
+    else:
+        anamnesis = anamnesis_repo.get_by_client_id(plan.client_id)
+        pending = anamnesis is None or not anamnesis.is_active
+
+    return ClientPlanRead(**plan.model_dump(), anamnesis_pending=pending)
 
 
 def _add_one_year(d: date) -> date:
@@ -68,20 +85,23 @@ def create(data: ClientPlanCreate) -> ClientPlan:
     if data.renewal_date is not None:
         payload["renewal_date"] = data.renewal_date.isoformat()
 
-    return repo.create(payload)
+    return _to_read(repo.create(payload))
 
 
-def get_all() -> list[ClientPlan]:
-    """Lista todas as matrículas."""
-    return repo.get_all()
+def get_all() -> list[ClientPlanRead]:
+    """Lista todas as matrículas (já com a flag de anamnese pendente)."""
+    plans = repo.get_all()
+    active_client_ids = anamnesis_repo.get_active_client_ids()
+    return [_to_read(p, active_client_ids) for p in plans]
 
 
-def get_by_id(client_plan_id: UUID) -> Optional[ClientPlan]:
+def get_by_id(client_plan_id: UUID) -> Optional[ClientPlanRead]:
     """Busca uma matrícula pelo ID. Devolve None se não achar."""
-    return repo.get_by_id(client_plan_id)
+    plan = repo.get_by_id(client_plan_id)
+    return _to_read(plan) if plan is not None else None
 
 
-def update(client_plan_id: UUID, data: ClientPlanUpdate) -> Optional[ClientPlan]:
+def update(client_plan_id: UUID, data: ClientPlanUpdate) -> Optional[ClientPlanRead]:
     """Atualiza uma matrícula que já existe."""
     update_data = data.model_dump(mode="json", exclude_none=True)
     if not update_data:
@@ -99,7 +119,8 @@ def update(client_plan_id: UUID, data: ClientPlanUpdate) -> Optional[ClientPlan]
             if active is not None and active.id != current.id:
                 raise _active_conflict(active)
 
-    return repo.update(client_plan_id, update_data)
+    updated = repo.update(client_plan_id, update_data)
+    return _to_read(updated) if updated is not None else None
 
 
 def delete(client_plan_id: UUID) -> bool:

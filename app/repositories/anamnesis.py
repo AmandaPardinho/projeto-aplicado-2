@@ -62,6 +62,21 @@ def get_by_client_id(client_id: UUID) -> Optional[Anamnesis]:
     return Anamnesis.model_validate(response.data[0])
 
 
+def get_active_client_ids() -> set[str]:
+    """Devolve o conjunto de client_ids que têm uma anamnese ATIVA.
+
+    Numa query só (em vez de uma por matrícula) — é o que o service usa pra
+    marcar "anamnese pendente" na listagem sem cair no problema N+1.
+    """
+    response = (
+        _client.table(TABLE)
+        .select("client_id")
+        .eq("is_active", True)
+        .execute()
+    )
+    return {row["client_id"] for row in response.data}
+
+
 def update(anamnesis_id: UUID, data: dict) -> Optional[Anamnesis]:
     """Atualiza uma anamnese e devolve ela já atualizada, ou None se não existir."""
     response = (
