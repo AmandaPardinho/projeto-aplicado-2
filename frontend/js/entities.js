@@ -15,7 +15,21 @@
      - actions: em quais ações o campo aparece (create / update)
      - mask?  : "cpf" | "whatsapp" (aplica máscara visual)
      - options? (select), default? (checkbox), min/step? (number)
+     - min/max? (date): trava o calendário do navegador (formato YYYY-MM-DD)
    ============================================================ */
+
+// Devolve uma data (YYYY-MM-DD) deslocada a partir de hoje.
+// years/days negativos = passado. Serve pra alimentar min/max dos <input type="date">,
+// que de outro jeito deixam digitar ano com 5+ dígitos.
+function dateBound({ years = 0, days = 0 } = {}) {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + years);
+    d.setDate(d.getDate() + days);
+    const yyyy = String(d.getFullYear()).padStart(4, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+}
 
 const ENTITIES = {
     clients: {
@@ -28,7 +42,8 @@ const ENTITIES = {
         fields: [
             { name: "name", label: "Nome", type: "text", actions: ["create", "update"], required: true, placeholder: "Maria Silva" },
             { name: "cpf", label: "CPF", type: "text", actions: ["create", "find-cpf"], required: true, mask: "cpf", placeholder: "000.000.000-00" },
-            { name: "birth_date", label: "Data de nascimento", type: "date", actions: ["create"], required: true },
+            // min/max travam a faixa de idade (4 a 120 anos) e impedem ano com 5+ dígitos.
+            { name: "birth_date", label: "Data de nascimento", type: "date", actions: ["create"], required: true, min: dateBound({ years: -120 }), max: dateBound({ years: -4 }) },
             { name: "whatsapp_number", label: "WhatsApp", type: "text", actions: ["create", "update"], required: true, mask: "whatsapp", placeholder: "(11) 98765-4321" },
             { name: "email", label: "E-mail", type: "email", actions: ["create", "update"], required: true, placeholder: "maria@exemplo.com" },
             {
@@ -42,7 +57,7 @@ const ENTITIES = {
             { name: "is_active", label: "Aluna ativa (desmarque = desativar)", type: "checkbox", actions: ["update"], default: true },
         ],
         columns: [
-            { key: "name", label: "Nome" },
+            { key: "name", label: "Nome", uppercase: true },
             { key: "cpf", label: "CPF", format: "cpf" },
             { key: "whatsapp_number", label: "WhatsApp", format: "whatsapp" },
             { key: "client_status", label: "Status", format: "enum" },
@@ -55,9 +70,9 @@ const ENTITIES = {
         fields: [
             { name: "name", label: "Nome", type: "text", actions: ["create", "update"], required: true, placeholder: "João Souza" },
             { name: "email", label: "E-mail", type: "email", actions: ["create", "update"], required: true, placeholder: "joao@exemplo.com" },
-            { name: "has_credential", label: "Possui credencial (CREFITO)", type: "checkbox", actions: ["create", "update"], default: false },
-            { name: "credential_number", label: "Número da credencial", type: "text", actions: ["create", "update"], placeholder: "obrigatório se marcou acima" },
-            { name: "specialty", label: "Especialidade", type: "text", actions: ["create", "update"], placeholder: "Pilates clínico" },
+            { name: "has_credential", label: "Possui registro profissional", type: "checkbox", actions: ["create", "update"], default: false },
+            { name: "credential_number", label: "Número do registro profissional", type: "text", actions: ["create", "update"], placeholder: "só números (ex.: 123456) — obrigatório se marcou acima" },
+            { name: "specialty", label: "Especialidade", type: "text", actions: ["create", "update"], placeholder: "Ed. física, fisioterapia, dança..." },
             {
                 name: "instructor_status", label: "Situação", type: "select", actions: ["create", "update"], options: [
                     { value: "active", label: "Ativo" },
@@ -70,7 +85,7 @@ const ENTITIES = {
             { name: "is_active", label: "Instrutor ativo (desmarque = desativar)", type: "checkbox", actions: ["update"], default: true },
         ],
         columns: [
-            { key: "name", label: "Nome" },
+            { key: "name", label: "Nome", uppercase: true },
             { key: "email", label: "E-mail" },
             { key: "specialty", label: "Especialidade" },
             { key: "instructor_status", label: "Situação", format: "enum" },
@@ -87,7 +102,7 @@ const ENTITIES = {
             { name: "is_active", label: "Plano ativo (desmarque = desativar)", type: "checkbox", actions: ["update"], default: true },
         ],
         columns: [
-            { key: "name", label: "Nome" },
+            { key: "name", label: "Nome", uppercase: true },
             { key: "sessions_per_month", label: "Sessões/mês" },
             { key: "monthly_fee", label: "Mensalidade", format: "brl" },
         ],
@@ -100,9 +115,9 @@ const ENTITIES = {
             { name: "client_id", label: "ID da aluna (UUID)", type: "text", actions: ["create"], required: true, placeholder: "cole o UUID da cliente" },
             { name: "plan_id", label: "ID do plano (UUID)", type: "text", actions: ["create"], required: true, placeholder: "cole o UUID do plano" },
             // start_date é opcional: vazio = hoje (o service preenche). O vencimento é derivado (+1 ano), não aparece aqui.
-            { name: "start_date", label: "Início da matrícula", type: "date", actions: ["create"] },
+            { name: "start_date", label: "Início da matrícula", type: "date", actions: ["create"], max: dateBound() },
             // renewal_date é manual: vazio na 1ª matrícula; data da rematrícula se a aluna já fazia antes.
-            { name: "renewal_date", label: "Data de renovação (rematrícula)", type: "date", actions: ["create", "update"] },
+            { name: "renewal_date", label: "Data de renovação (rematrícula)", type: "date", actions: ["create", "update"], max: dateBound({ years: 5 }) },
             { name: "is_active", label: "Matrícula ativa (desmarque = desativar)", type: "checkbox", actions: ["update"], default: true },
         ],
         columns: [
@@ -111,6 +126,7 @@ const ENTITIES = {
             { key: "start_date", label: "Início", format: "date" },
             { key: "end_date", label: "Vencimento", format: "date" },
             { key: "renewal_date", label: "Renovação", format: "date" },
+            { key: "anamnesis_pending", label: "Anamnese", format: "pending" },
         ],
     },
 

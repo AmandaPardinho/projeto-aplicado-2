@@ -108,6 +108,9 @@ function fieldToHtml(field) {
     const required = field.required && currentAction !== "update";
     const star = required ? ' <span class="req" aria-hidden="true">*</span>' : "";
     const ariaReq = required ? ' aria-required="true"' : "";
+    // required de verdade: faz o navegador BLOQUEAR o envio com o campo vazio
+    // (antes só tínhamos a estrela visual e o aria — não barrava nada).
+    const reqAttr = required ? " required" : "";
 
     if (field.type === "checkbox") {
         const checked = field.default ? "checked" : "";
@@ -127,7 +130,7 @@ function fieldToHtml(field) {
         return `
             <div class="field">
                 <label for="${id}">${field.label}${star}</label>
-                <select id="${id}" name="${field.name}"${ariaReq}>${opts}</select>
+                <select id="${id}" name="${field.name}"${ariaReq}${reqAttr}>${opts}</select>
             </div>`;
     }
 
@@ -136,13 +139,14 @@ function fieldToHtml(field) {
         `type="${field.type}"`,
         field.placeholder ? `placeholder="${field.placeholder}"` : "",
         field.min !== undefined ? `min="${field.min}"` : "",
+        field.max !== undefined ? `max="${field.max}"` : "",
         field.step ? `step="${field.step}"` : "",
     ].filter(Boolean).join(" ");
 
     return `
         <div class="field">
             <label for="${id}">${field.label}${star}</label>
-            <input id="${id}" name="${field.name}" ${attrs}${ariaReq}>
+            <input id="${id}" name="${field.name}" ${attrs}${ariaReq}${reqAttr}>
         </div>`;
 }
 
@@ -151,7 +155,7 @@ function idFieldHtml() {
     return `
         <div class="field">
             <label for="f-id">ID (UUID) <span class="req" aria-hidden="true">*</span></label>
-            <input id="f-id" name="id" type="text" aria-required="true" placeholder="cole o UUID aqui">
+            <input id="f-id" name="id" type="text" aria-required="true" required placeholder="cole o UUID aqui">
         </div>`;
 }
 
@@ -340,6 +344,9 @@ function enumLabel(entity, key, value) {
 }
 
 function formatValue(value, col, entity) {
+    // A flag de pendência é booleana: trato antes do guard de vazio porque
+    // `false` é um valor legítimo (= anamnese OK), não "sem dado".
+    if (col.format === "pending") return value ? "⚠️ Pendente" : "✓ OK";
     if (value === null || value === undefined || value === "") return "—";
     switch (col.format) {
         case "cpf": return formatCpf(value);
@@ -367,6 +374,8 @@ function renderTable(items) {
             const tr = document.createElement("tr");
             entity.columns.forEach((col) => {
                 const td = document.createElement("td");
+                // Caixa alta só na exibição (o dado no banco mantém a caixa original).
+                if (col.uppercase) td.classList.add("cell--upper");
                 // textContent (não innerHTML) evita injeção de HTML pelos dados do banco
                 td.textContent = formatValue(item[col.key], col, entity);
                 tr.appendChild(td);

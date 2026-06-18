@@ -603,6 +603,11 @@ tbody tr:hover {
     background: var(--brand-soft);
 }
 
+/* Exibe o nome em CAIXA ALTA só visualmente — o banco guarda a caixa original. */
+td.cell--upper {
+    text-transform: uppercase;
+}
+
 td.empty {
     color: var(--muted);
     text-align: center;
